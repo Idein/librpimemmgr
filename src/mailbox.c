@@ -10,6 +10,7 @@
 #include "rpimemmgr.h"
 #include "local.h"
 #include <mailbox.h>
+#include <bcm_host.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/mman.h>
@@ -54,16 +55,10 @@
  * map_offset is used as: phyaddr = BUS_TO_PHYS(busaddr + map_offset)
  */
 
-/*
- * Derived from
- * Brcm_Android_ICS_Graphics_Stack/brcm_usrlib/dag/vmcsx/vcinclude/hardware_vc4.h
- */
-/* Note: These definitions are only valid on VC4. */
-#define ALIAS_NORMAL(x) ((((uint32_t)(x)&~0xc0000000)|0x00000000))
-#define IS_ALIAS_NORMAL(x) ((((uint32_t)(x)>>30)&0x3)==0)
-
 /* Derived from hello_fft: http://www.aholme.co.uk/GPU_FFT/Main.htm . */
 #define BUS_TO_PHYS(x) ((x)&~0xC0000000)
+
+#define MEM_FLAG_MASK MEM_FLAG_L1_NONALLOCATING
 
 int alloc_mem_mailbox(const int fd_mb, const int fd_mem, const size_t size,
         const size_t align, const uint32_t flags, uint32_t *handlep,
@@ -71,6 +66,35 @@ int alloc_mem_mailbox(const int fd_mb, const int fd_mem, const size_t size,
 {
     uint32_t handle, busaddr;
     void *usraddr;
+    unsigned sdram_address;
+    uint32_t map_offset;
+
+    bcm_host_init();
+    sdram_address = bcm_host_get_sdram_address();
+    bcm_host_deinit();
+
+    if (sdram_address == 0x40000000) { /* BCM2835 */
+        switch (flags & MEM_FLAG_MASK) {
+            case MEM_FLAG_DIRECT:
+                map_offset = 0x20000000;
+                break;
+            case MEM_FLAG_L1_NONALLOCATING:
+                map_offset = 0x00000000;
+                break;
+            case MEM_FLAG_NORMAL:
+            case MEM_FLAG_COHERENT:
+            default:
+                print_error("flags must be one of these on BCM2835: " \
+                        "DIRECT, L1_NONALLOCATING\n");
+                return 1;
+        }
+    } else { /* BCM2836, BCM2837 */
+        if ((flags & MEM_FLAG_MASK) != MEM_FLAG_DIRECT) {
+            print_error("flags must be DIRECT on BCM2836 and BCM2837\n");
+            return 1;
+        }
+        map_offset = 0x00000000;
+    }
 
     handle = mailbox_mem_alloc(fd_mb, size, align, flags);
     if (!handle) {
@@ -84,19 +108,8 @@ int alloc_mem_mailbox(const int fd_mb, const int fd_mem, const size_t size,
         goto clean_alloc;
     }
 
-    /*
-     * Normal (cached) memory from VideoCore's perspective, that is, non-cached
-     * on CPU.
-     */
-    /* TODO: Caching support for Pi1. */
-    if (!IS_ALIAS_NORMAL(busaddr)) {
-        print_error("Cached memory with Mailbox is not supported\n");
-        print_error("Please write your own driver to do that\n");
-        goto clean_lock;
-    }
-
     usraddr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd_mem,
-            busaddr);
+            BUS_TO_PHYS(busaddr + map_offset));
     if (usraddr == MAP_FAILED) {
         print_error("Failed to map Mailbox memory to userland: %s\n",
                 strerror(errno));
