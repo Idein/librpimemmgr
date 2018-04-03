@@ -109,19 +109,23 @@ int main(void)
     if (err)
         return err;
 
+    /*
     printf("Mailbox: NORMAL:           ");
     err = test_mailbox(size, MEM_FLAG_NORMAL,           &st);
     if (err)
         return err;
-    /*
+    */
     printf("Mailbox: DIRECT:           ");
     err = test_mailbox(size, MEM_FLAG_DIRECT,           &st);
     if (err)
         return err;
+    /*
     printf("Mailbox: COHERENT:         ");
     err = test_mailbox(size, MEM_FLAG_COHERENT,         &st);
     if (err)
         return err;
+    */
+    /*
     printf("Mailbox: L1_NONALLOCATING: ");
     err = test_mailbox(size, MEM_FLAG_L1_NONALLOCATING, &st);
     if (err)
