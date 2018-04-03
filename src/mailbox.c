@@ -16,31 +16,6 @@
 #include <sys/mman.h>
 
 /*
- * The most significant 2 bits of bus address on VC4 will be:
- * +------------------+---------+------------------+
- * |                  | BCM2835 | BCM2836, BCM2837 |
- * +------------------+---------+------------------+
- * | NORMAL           |    0b00 |             0b00 |
- * | DIRECT           |    0b01 |             0b11 |
- * | COHERENT         |    0b10 |             0b10 |
- * | L1_NONALLOCATING |    0b11 |             0b10 |
- * +------------------+---------+------------------+
- *
- * Note that on VC5 no bits in address will be dedicated for memory type because
- * there will be a MMU on GPU.
- */
-
-/*
- * +--------------------+------------+------------------+
- * |                    | BCM2835    | BCM2836, BCM2837 |
- * +--------------------+------------+------------------+
- * | sdram_address      | 0x40000000 |       0xc0000000 |
- * | peripheral_address | 0x20000000 |       0x3f000000 |
- * | peripheral_size    | 0x01000000 |       0x01000000 |
- * +--------------------+------------+------------------+
- */
-
-/*
  * hello_fft-recommended parameters
  * (GPU_FFT_USE_VC4_L2_CACHE=0 means "with CPU cache".):
  * +------------+-------------------------+------------------+
@@ -53,6 +28,42 @@
  * So the most significant 3 bits of bus address on BCM2835 is used for cache
  * aliasing.  That's why BCM2835 cannot have memory more than 512MiB!
  * map_offset is used as: phyaddr = BUS_TO_PHYS(busaddr + map_offset)
+ *
+ * Note that on VC5 no bits in address will be dedicated for memory type because
+ * there will be a MMU on GPU.
+ */
+
+/*
+ * The most significant 3 bits of bus address with VCSM will be:
+ * +-------------+---------+------------------+
+ * |             | BCM2835 | BCM2836, BCM2837 |
+ * +-------------+---------+------------------+
+ * | NONE        |   0x110 |            0b11x |
+ * | HOST        |   0x110 |            0b11x |
+ * | VC          |   0x000 |            0b00x |
+ * | HOST_AND_VC |   0x000 |            0b00x |
+ * +-------------+---------+------------------+
+ *
+ * The most significant 3 bits of bus address with Mailbox will be:
+ * +------------------+---------+------------------+
+ * |                  | BCM2835 | BCM2836, BCM2837 |
+ * +------------------+---------+------------------+
+ * | NORMAL           |   0b00 |            0b00x |
+ * | DIRECT           |   0b01 |            0b11x |
+ * | COHERENT         |   0b10 |            0b10x |
+ * | L1_NONALLOCATING |   0b11 |            0b10x |
+ * +------------------+---------+------------------+
+ */
+
+/*
+ * With bcm_host, we can get:
+ * +--------------------+------------+------------------+
+ * |                    | BCM2835    | BCM2836, BCM2837 |
+ * +--------------------+------------+------------------+
+ * | sdram_address      | 0x40000000 |       0xc0000000 |
+ * | peripheral_address | 0x20000000 |       0x3f000000 |
+ * | peripheral_size    | 0x01000000 |       0x01000000 |
+ * +--------------------+------------+------------------+
  */
 
 /* Derived from hello_fft: http://www.aholme.co.uk/GPU_FFT/Main.htm . */
