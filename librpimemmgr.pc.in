@@ -5,6 +5,6 @@ includedir=${prefix}/include
 Name: @CPACK_PACKAGE_NAME@
 Description: @CPACK_PACKAGE_DESCRIPTION_SUMMARY@
 Version: @CPACK_PACKAGE_VERSION@
-Requires: vcsm libmailbox
+Requires: bcm_host vcsm libmailbox
 Cflags: -I${includedir}
 Libs: -L${libdir} -lrpimemmgr

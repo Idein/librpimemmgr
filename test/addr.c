@@ -15,31 +15,32 @@
 #include <sys/types.h>
 #include <inttypes.h>
 
-static int test_vcsm(const VCSM_CACHE_TYPE_T cache_type, struct rpimemmgr *sp) {
-    void *usraddr;
+static int test_vcsm(const VCSM_CACHE_TYPE_T cache_type, struct rpimemmgr *sp)
+{
     uint32_t busaddr;
+    int err;
 
-    usraddr = rpimemmgr_alloc_vcsm(4096, 4096, cache_type, &busaddr, sp);
-    if (usraddr == NULL)
-        return 1;
+    err = rpimemmgr_alloc_vcsm(4096, 4096, cache_type, NULL, &busaddr, sp);
+    if (err)
+        return err;
 
     printf("busaddr=0x%08" PRIx32 "\n", busaddr);
 
-    return rpimemmgr_free(usraddr, sp);
+    return rpimemmgr_free_by_busaddr(busaddr, sp);
 }
 
 static int test_mailbox(const uint32_t flags, struct rpimemmgr *sp)
 {
-    void *usraddr;
     uint32_t busaddr;
+    int err;
 
-    usraddr = rpimemmgr_alloc_mailbox(4096, 4096, flags, &busaddr, sp);
-    if (usraddr == NULL)
-        return 1;
+    err = rpimemmgr_alloc_mailbox(4096, 4096, flags, NULL, &busaddr, sp);
+    if (err)
+        return err;
 
     printf("busaddr=0x%08" PRIx32 "\n", busaddr);
 
-    return rpimemmgr_free(usraddr, sp);
+    return rpimemmgr_free_by_busaddr(busaddr, sp);
 }
 
 int main(void)
@@ -72,7 +73,6 @@ int main(void)
     err = test_mailbox(MEM_FLAG_NORMAL,           &st);
     if (err)
         return err;
-    /*
     printf("Mailbox: DIRECT:           ");
     err = test_mailbox(MEM_FLAG_DIRECT,           &st);
     if (err)
@@ -85,7 +85,6 @@ int main(void)
     err = test_mailbox(MEM_FLAG_L1_NONALLOCATING, &st);
     if (err)
         return err;
-    */
 
     return rpimemmgr_finalize(&st);
 }
