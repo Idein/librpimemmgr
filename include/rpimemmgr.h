@@ -26,18 +26,25 @@
     int rpimemmgr_init(struct rpimemmgr *sp);
     int rpimemmgr_finalize(struct rpimemmgr *sp);
 
-    /*
-     * IMPORTANT NOTE: You can specify NULL as busaddr.  In this case, busaddr
-     * is not passed to you here.  Use rpimemmgr_usraddr_to_busaddr() if you
-     * need that.
-     */
-    void* rpimemmgr_alloc_vcsm(const size_t size, const size_t align,
-            const VCSM_CACHE_TYPE_T cache_type, uint32_t *busaddrp,
-            struct rpimemmgr *sp);
-    void* rpimemmgr_alloc_mailbox(const size_t size, const size_t align,
-            const uint32_t flags, uint32_t *busaddrp, struct rpimemmgr *sp);
+    _Bool rpimemmgr_is_bcm2835(void);
 
-    int rpimemmgr_free(void * const usraddr, struct rpimemmgr *sp);
+    /*
+     * If usraddrp is NULL, then memory will NOT be mapped to userland.  This is
+     * very useful with Mailbox because that skips access to /dev/mem i.e. you
+     * don't need to be root.
+     *
+     * If busaddrp is NULL, then busaddr is not passed to you here.  Use
+     * rpimemmgr_usraddr_to_busaddr() if you need that.
+     */
+    int rpimemmgr_alloc_vcsm(const size_t size, const size_t align,
+            const VCSM_CACHE_TYPE_T cache_type, void **usraddrp,
+            uint32_t *busaddrp, struct rpimemmgr *sp);
+    int rpimemmgr_alloc_mailbox(const size_t size, const size_t align,
+            const uint32_t flags, void **usraddrp, uint32_t *busaddrp,
+            struct rpimemmgr *sp);
+
+    int rpimemmgr_free_by_usraddr(void * const usraddr, struct rpimemmgr *sp);
+    int rpimemmgr_free_by_busaddr(const uint32_t busaddr, struct rpimemmgr *sp);
 
     /* op0, usraddr0, size0, ... */
     int rpimemmgr_cache_op_multiple(const unsigned op_count, ...);

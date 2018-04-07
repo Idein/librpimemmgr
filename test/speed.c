@@ -44,42 +44,46 @@ static int test_vcsm(const size_t size, const VCSM_CACHE_TYPE_T cache_type,
         struct rpimemmgr *sp)
 {
     void *dst, *src;
-    int err_sum = 0;
+    int err = 0;
 
-    dst = rpimemmgr_alloc_vcsm(size, 4096, cache_type, NULL, sp);
-    if (dst == NULL)
-        return 1;
+    err = rpimemmgr_alloc_vcsm(size, 4096, cache_type, &dst, NULL, sp);
+    if (err)
+        goto clean_none;
 
-    src = rpimemmgr_alloc_vcsm(size, 4096, cache_type, NULL, sp);
-    if (src == NULL)
-        return 1;
+    err = rpimemmgr_alloc_vcsm(size, 4096, cache_type, &src, NULL, sp);
+    if (err)
+        goto clean_dst;
 
     test_speed_copy(size, dst, src);
 
-    err_sum |= rpimemmgr_free(src, sp);
-    err_sum |= rpimemmgr_free(dst, sp);
-    return err_sum;
+    err |= rpimemmgr_free_by_usraddr(src, sp);
+clean_dst:
+    err |= rpimemmgr_free_by_usraddr(dst, sp);
+clean_none:
+    return err;
 }
 
 static int test_mailbox(const size_t size, const uint32_t flags,
         struct rpimemmgr *sp)
 {
     void *dst, *src;
-    int err_sum = 0;
+    int err = 0;
 
-    dst = rpimemmgr_alloc_mailbox(size, 4096, flags, NULL, sp);
-    if (dst == NULL)
-        return 1;
+    err = rpimemmgr_alloc_mailbox(size, 4096, flags, &dst, NULL, sp);
+    if (err)
+        goto clean_none;
 
-    src = rpimemmgr_alloc_mailbox(size, 4096, flags, NULL, sp);
-    if (src == NULL)
-        return 1;
+    err = rpimemmgr_alloc_mailbox(size, 4096, flags, &src, NULL, sp);
+    if (err)
+        goto clean_dst;
 
     test_speed_copy(size, dst, src);
 
-    err_sum |= rpimemmgr_free(src, sp);
-    err_sum |= rpimemmgr_free(dst, sp);
-    return err_sum;
+    err |= rpimemmgr_free_by_usraddr(src, sp);
+clean_dst:
+    err |= rpimemmgr_free_by_usraddr(dst, sp);
+clean_none:
+    return err;
 }
 
 int main(void)
@@ -125,12 +129,12 @@ int main(void)
     if (err)
         return err;
     */
-    /*
-    printf("Mailbox: L1_NONALLOCATING: ");
-    err = test_mailbox(size, MEM_FLAG_L1_NONALLOCATING, &st);
-    if (err)
-        return err;
-    */
+    if (rpimemmgr_is_bcm2835()) {
+        printf("Mailbox: L1_NONALLOCATING: ");
+        err = test_mailbox(size, MEM_FLAG_L1_NONALLOCATING, &st);
+        if (err)
+            return err;
+    }
 
     return rpimemmgr_finalize(&st);
 }

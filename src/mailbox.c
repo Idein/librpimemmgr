@@ -72,22 +72,36 @@
 #define MEM_FLAG_MASK MEM_FLAG_L1_NONALLOCATING
 #define SDRAM_ADDRESS_BCM2835 0x40000000
 
+_Bool rpimemmgr_is_bcm2835(void)
+{
+    unsigned sdram_address;
+
+    bcm_host_init();
+    sdram_address = bcm_host_get_sdram_address();
+    bcm_host_deinit();
+
+    if (sdram_address == SDRAM_ADDRESS_BCM2835)
+        return !0;
+    return 0;
+}
+
 int alloc_mem_mailbox(const int fd_mb, const int fd_mem, const size_t size,
         const size_t align, const uint32_t flags, uint32_t *handlep,
         uint32_t *busaddrp, void **usraddrp)
 {
     uint32_t handle, busaddr;
     void *usraddr;
-    unsigned sdram_address;
-    uint32_t map_offset;
+    uint32_t map_offset = 0;
     const _Bool do_mapping = (usraddrp != NULL);
+    const _Bool is_bcm2835 = rpimemmgr_is_bcm2835();
 
-    bcm_host_init();
-    sdram_address = bcm_host_get_sdram_address();
-    bcm_host_deinit();
+    if (handlep == NULL && busaddrp == NULL && usraddrp == NULL) {
+        print_error("Cannot return pointer\n");
+        return 1;
+    }
 
     if (do_mapping) {
-        if (sdram_address == SDRAM_ADDRESS_BCM2835) { /* BCM2835 */
+        if (is_bcm2835) { /* BCM2835 */
             switch (flags & MEM_FLAG_MASK) {
                 case MEM_FLAG_DIRECT:
                     map_offset = 0x20000000;
@@ -124,9 +138,9 @@ int alloc_mem_mailbox(const int fd_mb, const int fd_mem, const size_t size,
     }
 
     if (do_mapping) {
-        if (sdram_address == SDRAM_ADDRESS_BCM2835 && (busaddr & 0xe0000000)) {
+        if (is_bcm2835 && (busaddr & 0x20000000)) {
             print_error("The third significant bit is set to busaddr " \
-                    "on BCM2835\n");
+                    "on BCM2835: 0x%08x\n", busaddr);
             goto clean_lock;
         }
 
@@ -157,11 +171,13 @@ int free_mem_mailbox(const int fd_mb, const size_t size, const uint32_t handle,
 {
     int err, err_sum = 0;
 
-    err = munmap(usraddr, size);
-    if (err) {
-        print_error("munmap: %s\n", strerror(errno));
-        err_sum = err;
-        /* Continue finalization. */
+    if (usraddr != NULL) {
+        err = munmap(usraddr, size);
+        if (err) {
+            print_error("munmap: %s\n", strerror(errno));
+            err_sum = err;
+            /* Continue finalization. */
+        }
     }
 
     err = mailbox_mem_unlock(fd_mb, busaddr);

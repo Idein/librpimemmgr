@@ -41,9 +41,9 @@ static int mem_elem_compar(const void *pa, const void *pb)
 {
     const struct mem_elem *na = (const struct mem_elem*) pa,
                           *nb = (const struct mem_elem*) pb;
-    if (na->usraddr < nb->usraddr)
+    if (na->busaddr < nb->busaddr)
         return -1;
-    if (na->usraddr > nb->usraddr)
+    if (na->busaddr > nb->busaddr)
         return 1;
     return 0;
 }
@@ -183,8 +183,8 @@ int rpimemmgr_finalize(struct rpimemmgr *sp)
     return err_sum;
 }
 
-void* rpimemmgr_alloc_vcsm(const size_t size, const size_t align,
-        const VCSM_CACHE_TYPE_T cache_type, uint32_t *busaddrp,
+int rpimemmgr_alloc_vcsm(const size_t size, const size_t align,
+        const VCSM_CACHE_TYPE_T cache_type, void **usraddrp, uint32_t *busaddrp,
         struct rpimemmgr *sp)
 {
     uint32_t handle, busaddr;
@@ -193,54 +193,57 @@ void* rpimemmgr_alloc_vcsm(const size_t size, const size_t align,
 
     if (sp == NULL) {
         print_error("sp is NULL\n");
-        return NULL;
+        return 1;
     }
 
     if (!sp->priv->is_vcsm_inited) {
         err = vcsm_init();
         if (err) {
             print_error("Failed to initialize VCSM\n");
-            return NULL;
+            return err;
         }
     }
 
     err = alloc_mem_vcsm(size, align, cache_type, &handle, &busaddr, &usraddr);
     if (err)
-        return NULL;
+        return err;
 
     err = register_mem(MEM_TYPE_VCSM, size, handle, busaddr, usraddr, sp);
     if (err) {
         (void) free_mem_vcsm(handle, usraddr);
-        return NULL;
+        return err;
     }
 
+    if (usraddrp)
+        *usraddrp = usraddr;
     if (busaddrp)
         *busaddrp = busaddr;
-    return usraddr;
+    return 0;
 }
 
-void* rpimemmgr_alloc_mailbox(const size_t size, const size_t align,
-        const uint32_t flags, uint32_t *busaddrp, struct rpimemmgr *sp)
+int rpimemmgr_alloc_mailbox(const size_t size, const size_t align,
+        const uint32_t flags, void **usraddrp, uint32_t *busaddrp,
+        struct rpimemmgr *sp)
 {
     uint32_t handle, busaddr;
-    void *usraddr;
+    const _Bool do_mapping = (usraddrp != NULL);
     int err;
 
     if (sp == NULL) {
         print_error("sp is NULL\n");
-        return NULL;
+        return 1;
     }
 
     if (sp->priv->fd_mb == -1) {
         const int fd = mailbox_open();
         if (fd == -1) {
             print_error("Failed to open Mailbox\n");
-            return NULL;
+            return fd;
         }
         sp->priv->fd_mb = fd;
     }
 
-    if (sp->priv->fd_mem == -1) {
+    if (do_mapping && sp->priv->fd_mem == -1) {
         /*
          * This fd will be used only for mapping Mailbox memory, which is
          * non-cached.  That's why we specify O_SYNC here.
@@ -254,41 +257,77 @@ void* rpimemmgr_alloc_mailbox(const size_t size, const size_t align,
     }
 
     err = alloc_mem_mailbox(sp->priv->fd_mb, sp->priv->fd_mem, size, align,
-            flags, &handle, &busaddr, &usraddr);
+            flags, &handle, &busaddr, usraddrp);
     if (err)
         goto clean_mem;
 
-    err = register_mem(MEM_TYPE_MAILBOX, size, handle, busaddr, usraddr, sp);
+    err = register_mem(MEM_TYPE_MAILBOX, size, handle, busaddr,
+            usraddrp != NULL ? *usraddrp : NULL, sp);
     if (err)
         goto clean_alloc;
 
     if (busaddrp)
         *busaddrp = busaddr;
-    return usraddr;
+    return 0;
 
 clean_alloc:
-    (void) free_mem_mailbox(sp->priv->fd_mb, size, handle, busaddr, usraddr);
+    (void) free_mem_mailbox(sp->priv->fd_mb, size, handle, busaddr,
+            usraddrp != NULL ? *usraddrp : NULL);
 clean_mem:
-    (void) close(sp->priv->fd_mem);
+    if (do_mapping)
+        (void) close(sp->priv->fd_mem);
     sp->priv->fd_mem = -1;
 clean_mb:
     (void) mailbox_close(sp->priv->fd_mb);
     sp->priv->fd_mb = -1;
-    return NULL;
+    return 1;
 }
 
-int rpimemmgr_free(void * const usraddr, struct rpimemmgr *sp)
+int rpimemmgr_free_by_busaddr(const uint32_t busaddr, struct rpimemmgr *sp)
 {
     void *node;
     struct mem_elem elem_key = {
-        .usraddr = usraddr
+        .busaddr = busaddr
     };
 
     node = tfind(&elem_key, &sp->priv->root, mem_elem_compar);
     if (node == NULL) {
-        print_error("No such mem_elem: usraddr=%p\n", usraddr);
+        print_error("No such mem_elem: busaddr=0x%08x\n", busaddr);
         return 1;
     }
 
     return free_elem(*(struct mem_elem**) node, sp);
+}
+
+static void *usraddr_to_find = NULL;
+static uint32_t busaddr_found = 0;
+static void action_find_busaddr_by_usraddr(const void *nodep, const VISIT which,
+        const int depth)
+{
+    const struct mem_elem *p = *(const struct mem_elem**) nodep;
+
+    (void) depth;
+
+    if (!usraddr_to_find) {
+        print_error("busaddr_to_find is not set (internal error)\n");
+        return;
+    }
+    if (busaddr_found)
+        return;
+
+    if ((which == preorder || which == leaf) && p->usraddr == usraddr_to_find)
+        busaddr_found = p->busaddr;
+}
+
+int rpimemmgr_free_by_usraddr(void * const usraddr, struct rpimemmgr *sp)
+{
+    usraddr_to_find = usraddr;
+    busaddr_found = 0;
+    twalk(sp->priv->root, action_find_busaddr_by_usraddr);
+    if (!busaddr_found) {
+        print_error("usraddr=%p is not found\n", usraddr);
+        return 1;
+    }
+
+    return rpimemmgr_free_by_busaddr(busaddr_found, sp);
 }
