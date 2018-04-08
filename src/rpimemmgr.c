@@ -299,6 +299,17 @@ int rpimemmgr_free_by_busaddr(const uint32_t busaddr, struct rpimemmgr *sp)
     return free_elem(*(struct mem_elem**) node, sp);
 }
 
+int rpimemmgr_free_by_usraddr(void * const usraddr, struct rpimemmgr *sp)
+{
+    uint32_t busaddr;
+
+    busaddr = rpimemmgr_usraddr_to_busaddr(usraddr, sp);
+    if (!busaddr)
+        return 1;
+
+    return rpimemmgr_free_by_busaddr(busaddr, sp);
+}
+
 static void *usraddr_to_find = NULL;
 static uint32_t busaddr_found = 0;
 static void action_find_busaddr_by_usraddr(const void *nodep, const VISIT which,
@@ -319,15 +330,16 @@ static void action_find_busaddr_by_usraddr(const void *nodep, const VISIT which,
         busaddr_found = p->busaddr;
 }
 
-int rpimemmgr_free_by_usraddr(void * const usraddr, struct rpimemmgr *sp)
+uint32_t rpimemmgr_usraddr_to_busaddr(void * const usraddr,
+        struct rpimemmgr *sp)
 {
     usraddr_to_find = usraddr;
     busaddr_found = 0;
     twalk(sp->priv->root, action_find_busaddr_by_usraddr);
     if (!busaddr_found) {
         print_error("usraddr=%p is not found\n", usraddr);
-        return 1;
+        return 0;
     }
 
-    return rpimemmgr_free_by_busaddr(busaddr_found, sp);
+    return busaddr_found;
 }
