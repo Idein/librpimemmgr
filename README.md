@@ -32,41 +32,33 @@ $ sudo dpkg -i librpimemmgr-x.y.z-system.deb
 ```
 
 
-## Running tests
+## Tests
 
 ### `test/addr`
 
 <table>
-<tr> <th>BCM2835</th> <th>BCM2836, BCM2837</th> </tr> <tr> <td><pre>
-
-VCSM:    NONE:             busaddr=0xde400000
-VCSM:    HOST:             busaddr=0xde400000
-VCSM:    VC:               busaddr=0x1e400000
-VCSM:    HOST_AND_VC:      busaddr=0x1e400000
-Mailbox: NORMAL:           busaddr=0x1e400000
-Mailbox: DIRECT:           busaddr=0xde400000
-Mailbox: COHERENT:         busaddr=0x9e400000
-Mailbox: L1_NONALLOCATING: busaddr=0x5e400000</pre></td> <td><pre> VCSM:    NONE:             busaddr=0xfe400000
-VCSM:    HOST:             busaddr=0xfe400000
-VCSM:    VC:               busaddr=0x3e400000
-VCSM:    HOST_AND_VC:      busaddr=0x3e400000
-Mailbox: NORMAL:           busaddr=0x3e400000
-Mailbox: DIRECT:           busaddr=0xfe400000
-Mailbox: COHERENT:         busaddr=0xbe400000
-Mailbox: L1_NONALLOCATING: busaddr=0xbe400000</pre></td> </tr></table>
+<tr> <th rowspan=2>type</th> <th rowspan=2>flag</th> <th colspan=2>busaddr</th> </tr>
+<tr> <th>BCM2835</th> <th>BCM2836, BCM2837</th> </tr>
+<tr> <th rowspan=4>VCSM</th>    <th>NONE</th>             <td align="right"><code>0xde400000</code></td> <td align="right"><code>0xfe400000</code></td> </tr>
+<tr>                            <th>HOST</th>             <td align="right"><code>0xde400000</code></td> <td align="right"><code>0xfe400000</code></td> </tr>
+<tr>                            <th>VC</th>               <td align="right"><code>0x1e400000</code></td> <td align="right"><code>0x3e400000</code></td> </tr>
+<tr>                            <th>HOST_AND_VC</th>      <td align="right"><code>0x1e400000</code></td> <td align="right"><code>0x3e400000</code></td> </tr>
+<tr> <th rowspan=4>Mailbox</th> <th>NORMAL</th>           <td align="right"><code>0x1e400000</code></td> <td align="right"><code>0x3e400000</code></td> </tr>
+<tr>                            <th>DIRECT</th>           <td align="right"><code>0xde400000</code></td> <td align="right"><code>0xfe400000</code></td> </tr>
+<tr>                            <th>COHERENT</th>         <td align="right"><code>0x9e400000</code></td> <td align="right"><code>0xbe400000</code></td> </tr>
+<tr>                            <th>L1_NONALLOCATING</th> <td align="right"><code>0x5e400000</code></td> <td align="right"><code>0xbe400000</code></td> </tr>
+</table>
 
 ### `test/speed`
 
 <table>
-<tr> <th>BCM2835</th> <th>BCM2836, BCM2837</th> </tr> <tr> <td><pre>
-
-VCSM:    NONE:             1.245705e-01 [s], 1.346804e+08 [B/s]
-VCSM:    HOST:             4.238536e-02 [s], 3.958258e+08 [B/s]
-VCSM:    VC:               1.241340e-01 [s], 1.351541e+08 [B/s]
-VCSM:    HOST_AND_VC:      4.237868e-02 [s], 3.958881e+08 [B/s]
-Mailbox: DIRECT:           1.088927e-01 [s], 1.540711e+08 [B/s]
-Mailbox: L1_NONALLOCATING: 1.243708e-01 [s], 1.348967e+08 [B/s]</pre></td> <td><pre>VCSM:    NONE:             1.088042e-01 [s], 1.541963e+08 [B/s]
-VCSM:    HOST:             1.996657e-02 [s], 8.402653e+08 [B/s]
-VCSM:    VC:               1.088309e-01 [s], 1.541585e+08 [B/s]
-VCSM:    HOST_AND_VC:      1.998646e-02 [s], 8.394293e+08 [B/s]
-Mailbox: DIRECT:           1.088085e-01 [s], 1.541903e+08 [B/s]</pre></td> </tr></table>
+<tr> <th rowspan=2>type</th> <th rowspan=2>flag</th> <th colspan=2><code>memcpy</code> speed [B/s]</th> </tr>
+<tr> <th>Raspberry Pi 1</th> <th>Raspberry Pi 2</th> </tr>
+<tr> <th>malloc</th>            <th></th>                 <td align="right"><code>1.190533e+09</code></td> <td align="right"><code>1.040112e+09</code></td> </tr>
+<tr> <th rowspan=4>VCSM</th>    <th>NONE</th>             <td align="right"><code>1.346804e+08</code></td> <td align="right"><code>1.541963e+08</code></td> </tr>
+<tr>                            <th>HOST</th>             <td align="right"><code>3.958258e+08</code></td> <td align="right"><code>8.402653e+08</code></td> </tr>
+<tr>                            <th>VC</th>               <td align="right"><code>1.351541e+08</code></td> <td align="right"><code>1.541585e+08</code></td> </tr>
+<tr>                            <th>HOST_AND_VC</th>      <td align="right"><code>3.958881e+08</code></td> <td align="right"><code>8.394293e+08</code></td> </tr>
+<tr> <th rowspan=2>Mailbox</th> <th>DIRECT</th>           <td align="right"><code>1.540711e+08</code></td> <td align="right"><code>1.541903e+08</code></td> </tr>
+<tr>                            <th>L1_NONALLOCATING</th> <td align="right"><code>1.348967e+08</code></td> <td align="right"></td>                          </tr>
+</table>
