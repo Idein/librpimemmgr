@@ -9,6 +9,7 @@
 
 #include "rpimemmgr.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <time.h>
@@ -38,6 +39,32 @@ static void test_speed_copy(const size_t size, void *dst, void *src)
 
     elapsed = (end - start) / n_measure;
     printf("%e [s], %e [B/s]\n", elapsed, size / elapsed);
+}
+
+static int test_malloc(const size_t size)
+{
+    void *dst, *src;
+    int err = 0;
+
+    err = posix_memalign(&dst, 4096, size);
+    if (err) {
+        fprintf(stderr, "Failed to allocate dst\n");
+        goto clean_none;
+    }
+
+    err = posix_memalign(&src, 4096, size);
+    if (err) {
+        fprintf(stderr, "Failed to allocate src\n");
+        goto clean_dst;
+    }
+
+    test_speed_copy(size, dst, src);
+
+    free(src);
+clean_dst:
+    free(dst);
+clean_none:
+    return err;
 }
 
 static int test_vcsm(const size_t size, const VCSM_CACHE_TYPE_T cache_type,
@@ -91,6 +118,11 @@ int main(void)
     const size_t size = 1UL<<24; /* 16 MiB */
     struct rpimemmgr st;
     int err;
+
+    printf("malloc:                    ");
+    err = test_malloc(size);
+    if (err)
+        return err;
 
     err = rpimemmgr_init(&st);
     if (err)
