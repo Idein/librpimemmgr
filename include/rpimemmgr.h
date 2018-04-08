@@ -59,4 +59,9 @@
 
     uint32_t rpimemmgr_usraddr_to_busaddr(const void *usraddr);
 
+    void unif_set_uint(uint32_t *p, const uint32_t u);
+    void unif_set_float(uint32_t *p, const float f);
+    void unif_add_uint(const uint32_t u, uint32_t **pp);
+    void unif_add_float(const float f, uint32_t **pp);
+
 #endif /* RPIMEMMGR_H_ */
