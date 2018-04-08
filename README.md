@@ -9,9 +9,9 @@ Mailbox interface.
 ## Requirements
 
 - You need [mailbox](https://github.com/Terminus-IMRC/mailbox).
-- You need to be **either**:
-  - belong to `video` group.
-  - be `root` user.
+- You need to be:
+  - belong to `video` group **or** be `root` user to use VCSM functions.
+  - be `root` user to use Mailbox functions.
 
 
 ## Installation
