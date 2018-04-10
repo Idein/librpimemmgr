@@ -202,6 +202,7 @@ int rpimemmgr_alloc_vcsm(const size_t size, const size_t align,
             print_error("Failed to initialize VCSM\n");
             return err;
         }
+        sp->priv->is_vcsm_inited = !0;
     }
 
     err = alloc_mem_vcsm(size, align, cache_type, &handle, &busaddr, &usraddr);
