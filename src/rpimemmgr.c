@@ -311,6 +311,8 @@ int rpimemmgr_free_by_usraddr(void * const usraddr, struct rpimemmgr *sp)
     return rpimemmgr_free_by_busaddr(busaddr, sp);
 }
 
+#define IN_RANGE(val, lo, hi) ((lo) <= (val) && (val) < (hi))
+
 static void *usraddr_to_find = NULL;
 static uint32_t busaddr_found = 0;
 static void action_find_busaddr_by_usraddr(const void *nodep, const VISIT which,
@@ -327,8 +329,9 @@ static void action_find_busaddr_by_usraddr(const void *nodep, const VISIT which,
     if (busaddr_found)
         return;
 
-    if ((which == preorder || which == leaf) && p->usraddr == usraddr_to_find)
-        busaddr_found = p->busaddr;
+    if ((which == preorder || which == leaf)
+            && IN_RANGE(usraddr_to_find, p->usraddr, p->usraddr + p->size))
+        busaddr_found = p->busaddr + (usraddr_to_find - p->usraddr);
 }
 
 uint32_t rpimemmgr_usraddr_to_busaddr(void * const usraddr,
