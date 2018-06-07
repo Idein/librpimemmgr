@@ -24,7 +24,8 @@
 struct rpimemmgr_priv {
     _Bool is_vcsm_inited;
     int fd_mb, fd_mem;
-    void *root;
+    void *busaddr_based_root;
+    void *usraddr_based_root;
 };
 
 struct mem_elem {
@@ -34,10 +35,10 @@ struct mem_elem {
     } type;
     size_t size;
     uint32_t handle, busaddr;
-    void *usraddr;
+    const void *usraddr;
 };
 
-static int mem_elem_compar(const void *pa, const void *pb)
+static int mem_elem_busaddr_compar(const void *pa, const void *pb)
 {
     const struct mem_elem *na = (const struct mem_elem*) pa,
                           *nb = (const struct mem_elem*) pb;
@@ -48,22 +49,35 @@ static int mem_elem_compar(const void *pa, const void *pb)
     return 0;
 }
 
+static int mem_elem_usraddr_compar(const void *pa, const void *pb)
+{
+    const struct mem_elem *na = (const struct mem_elem*) pa,
+                          *nb = (const struct mem_elem*) pb;
+    if (na->usraddr < nb->usraddr)
+        return -1;
+    if (na->usraddr > nb->usraddr)
+        return 1;
+    return 0;
+}
+
 static int free_elem(struct mem_elem *ep, struct rpimemmgr *sp)
 {
-    void *node;
+    void *node_from_busaddr_based;
+    void *node_from_usraddr_based;
 
-    node = tdelete(ep, &sp->priv->root, mem_elem_compar);
-    if (node == NULL) {
+    node_from_busaddr_based = tdelete(ep, &sp->priv->busaddr_based_root, mem_elem_busaddr_compar);
+    node_from_usraddr_based = tdelete(ep, &sp->priv->usraddr_based_root, mem_elem_usraddr_compar);
+    if (node_from_busaddr_based == NULL || node_from_usraddr_based == NULL) {
         print_error("Node not found\n");
         return 1;
     }
 
     switch (ep->type) {
         case MEM_TYPE_VCSM:
-            return free_mem_vcsm(ep->handle, ep->usraddr);
+            return free_mem_vcsm(ep->handle, (void*)ep->usraddr);
         case MEM_TYPE_MAILBOX:
             return free_mem_mailbox(sp->priv->fd_mb, ep->size, ep->handle,
-                    ep->busaddr, ep->usraddr);
+                    ep->busaddr, (void*)ep->usraddr);
         default:
             print_error("Unknown memory type: 0x%08x\n", ep->type);
             return 1;
@@ -75,8 +89,8 @@ static int free_elem(struct mem_elem *ep, struct rpimemmgr *sp)
 static int free_all_elems(struct rpimemmgr *sp)
 {
     int err_sum = 0;
-    while (sp->priv->root != NULL) {
-        int err = free_elem(*(struct mem_elem**) sp->priv->root, sp);
+    while (sp->priv->busaddr_based_root != NULL) {
+        int err = free_elem(*(struct mem_elem**) sp->priv->busaddr_based_root, sp);
         if (err) {
             err_sum = err;
             /* Continue finalization. */
@@ -90,6 +104,7 @@ static int register_mem(const enum mem_elem_type type, const size_t size,
         void * const usraddr, struct rpimemmgr *sp)
 {
     struct mem_elem *ep, *ep_ret;
+    void *node = NULL;
 
     ep = malloc(sizeof(*ep));
     if (ep == NULL) {
@@ -103,7 +118,7 @@ static int register_mem(const enum mem_elem_type type, const size_t size,
     ep->busaddr = busaddr;
     ep->usraddr = usraddr;
 
-    ep_ret = tsearch(ep, &sp->priv->root, mem_elem_compar);
+    ep_ret = tsearch(ep, &sp->priv->busaddr_based_root, mem_elem_busaddr_compar);
     if (ep_ret == NULL) {
         print_error("Internal error in tsearch\n");
         goto clean_ep;
@@ -113,7 +128,24 @@ static int register_mem(const enum mem_elem_type type, const size_t size,
         goto clean_ep;
     }
 
+    ep_ret = tsearch(ep, &sp->priv->usraddr_based_root, mem_elem_usraddr_compar);
+    if (ep_ret == NULL) {
+        print_error("Internal error in tsearch\n");
+        goto clean_and_delete_ep;
+    }
+    if (*(struct mem_elem**) ep_ret != ep) {
+        print_error("Duplicate usraddr (internal error)\n");
+        goto clean_and_delete_ep;
+    }
+
     return 0;
+
+clean_and_delete_ep:
+    node = tdelete(ep, &sp->priv->busaddr_based_root, mem_elem_busaddr_compar);
+    if (node == NULL) {
+        print_error("Node not found\n");
+        goto clean_ep;
+    }
 
 clean_ep:
     free(ep);
@@ -138,7 +170,8 @@ int rpimemmgr_init(struct rpimemmgr *sp)
     priv->is_vcsm_inited = 0;
     priv->fd_mb = -1;
     priv->fd_mem = -1;
-    priv->root = NULL;
+    priv->busaddr_based_root = NULL;
+    priv->usraddr_based_root = NULL;
     sp->priv = priv;
     return 0;
 }
@@ -291,7 +324,7 @@ int rpimemmgr_free_by_busaddr(const uint32_t busaddr, struct rpimemmgr *sp)
         .busaddr = busaddr
     };
 
-    node = tfind(&elem_key, &sp->priv->root, mem_elem_compar);
+    node = tfind(&elem_key, &sp->priv->busaddr_based_root, mem_elem_busaddr_compar);
     if (node == NULL) {
         print_error("No such mem_elem: busaddr=0x%08x\n", busaddr);
         return 1;
@@ -302,48 +335,49 @@ int rpimemmgr_free_by_busaddr(const uint32_t busaddr, struct rpimemmgr *sp)
 
 int rpimemmgr_free_by_usraddr(void * const usraddr, struct rpimemmgr *sp)
 {
-    uint32_t busaddr;
+    void *node;
+    struct mem_elem elem_key = {
+        .usraddr = usraddr
+    };
 
-    busaddr = rpimemmgr_usraddr_to_busaddr(usraddr, sp);
-    if (!busaddr)
+    node = tfind(&elem_key, &sp->priv->usraddr_based_root, mem_elem_usraddr_compar);
+    if (node == NULL) {
+        print_error("No such mem_elem: usraddr=%p\n", usraddr);
         return 1;
+    }
 
-    return rpimemmgr_free_by_busaddr(busaddr, sp);
+    return free_elem(*(struct mem_elem**) node, sp);
 }
 
 #define IN_RANGE(val, lo, hi) ((lo) <= (val) && (val) < (hi))
-
-static void *usraddr_to_find = NULL;
-static uint32_t busaddr_found = 0;
-static void action_find_busaddr_by_usraddr(const void *nodep, const VISIT which,
-        const int depth)
+static int find_busaddr_by_usraddr(const void *pa, const void *pb)
 {
-    const struct mem_elem *p = *(const struct mem_elem**) nodep;
-
-    (void) depth;
-
-    if (!usraddr_to_find) {
-        print_error("busaddr_to_find is not set (internal error)\n");
-        return;
+    const struct mem_elem *na = (const struct mem_elem*) pa;
+    const struct mem_elem *nb = (const struct mem_elem*) pb;
+    const struct mem_elem *key = na->size == 0 ? na : nb;
+    const struct mem_elem *target = na->size == 0 ? nb : na;
+    if (IN_RANGE(key->usraddr, target->usraddr, target->usraddr + target->size)) {
+        return 0;
+    } else if (key->usraddr < target->usraddr) {
+        return -1;
+    } else {
+        return 1;
     }
-    if (busaddr_found)
-        return;
-
-    if ((which == preorder || which == leaf)
-            && IN_RANGE(usraddr_to_find, p->usraddr, p->usraddr + p->size))
-        busaddr_found = p->busaddr + (usraddr_to_find - p->usraddr);
 }
 
-uint32_t rpimemmgr_usraddr_to_busaddr(void * const usraddr,
+uint32_t rpimemmgr_usraddr_to_busaddr(const void * const usraddr,
         struct rpimemmgr *sp)
 {
-    usraddr_to_find = usraddr;
-    busaddr_found = 0;
-    twalk(sp->priv->root, action_find_busaddr_by_usraddr);
-    if (!busaddr_found) {
+    struct mem_elem elem_key = {
+        .size = 0,
+        .usraddr = usraddr,
+    };
+    void* found = tfind(&elem_key, &sp->priv->usraddr_based_root, find_busaddr_by_usraddr);
+    if (found == NULL) {
         print_error("usraddr=%p is not found\n", usraddr);
         return 0;
     }
+    struct mem_elem* node = *(struct mem_elem**)found;
 
-    return busaddr_found;
+    return node->busaddr + (usraddr - node->usraddr);
 }
