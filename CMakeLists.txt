@@ -8,9 +8,9 @@ set(CPACK_PACKAGE_CONTACT "Sugizaki Yukimasa <ysugi@idein.jp>")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "A memory manager for Raspberry Pi")
 
 # See https://semver.org/ and https://www.pakin.org/~scott/ltver.html .
-set(CPACK_PACKAGE_VERSION_MAJOR 2)
+set(CPACK_PACKAGE_VERSION_MAJOR 3)
 set(CPACK_PACKAGE_VERSION_MINOR 0)
-set(CPACK_PACKAGE_VERSION_PATCH 1)
+set(CPACK_PACKAGE_VERSION_PATCH 0)
 
 if (CPACK_PACKAGING_INSTALL_PREFIX STREQUAL "")
     set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
