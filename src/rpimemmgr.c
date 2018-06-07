@@ -128,7 +128,7 @@ static int register_mem(const enum mem_elem_type type, const size_t size,
         goto clean_ep;
     }
     if (*(struct mem_elem**) ep_ret != ep) {
-        print_error("Duplicate usraddr (internal error)\n");
+        print_error("Duplicate busaddr (internal error)\n");
         goto clean_ep;
     }
 
