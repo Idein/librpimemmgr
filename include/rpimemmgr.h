@@ -57,7 +57,7 @@
             const size_t block_count, const size_t block_size,
             const size_t stride);
 
-    uint32_t rpimemmgr_usraddr_to_busaddr(void * const usraddr,
+    uint32_t rpimemmgr_usraddr_to_busaddr(const void * const usraddr,
             struct rpimemmgr *sp);
 
     void unif_set_uint(uint32_t *p, const uint32_t u);
