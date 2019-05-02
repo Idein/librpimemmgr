@@ -15,10 +15,16 @@
 #include <time.h>
 #include <sys/types.h>
 
-static double get_time(void)
+
+#define barrier() __asm__ volatile ("" : : : "memory")
+#define barrier_data(ptr) __asm__ volatile ("" : : "r" (ptr) : "memory")
+
+
+static inline
+double get_time(void)
 {
     struct timespec t;
-    (void) clock_gettime(CLOCK_MONOTONIC, &t);
+    (void) clock_gettime(CLOCK_MONOTONIC_RAW, &t);
     return (double) t.tv_sec + t.tv_nsec * 1e-9;
 }
 
@@ -26,16 +32,31 @@ static void test_speed_copy(const size_t size, void *dst, void *src)
 {
     double start, end, elapsed;
     unsigned i;
-    const unsigned n_warmup = 16, n_measure = 16;
+    const unsigned n_warmup = 16, n_measure = 32;
     /* const unsigned n_cooldown = ...; */
 
-    for (i = 0; i < n_warmup; i ++)
-        (void) memcpy(dst, src, size);
+    memset(src, 0x55, size);
+    memset(dst, 0xaa, size);
+    barrier_data(src);
+    barrier_data(dst);
 
-    start = get_time();
-    for (i = 0; i < n_measure; i ++)
+    for (i = 0; i < n_warmup; i ++) {
         (void) memcpy(dst, src, size);
+        barrier_data(src);
+        barrier_data(dst);
+    }
+
+    barrier();
+    start = get_time();
+    barrier();
+    for (i = 0; i < n_measure; i ++) {
+        (void) memcpy(dst, src, size);
+        barrier_data(src);
+        barrier_data(dst);
+    }
+    barrier();
     end = get_time();
+    barrier();
 
     elapsed = (end - start) / n_measure;
     printf("%e [s], %e [B/s]\n", elapsed, size / elapsed);
