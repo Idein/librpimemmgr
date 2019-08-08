@@ -6,7 +6,8 @@ set(RPIMEMMGR_LDFLAGS "${BCM_HOST_LDFLAGS}" "${VCSM_LDFLAGS}"
                       "${MAILBOX_LDFLAGS}")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pipe -W -Wall -Wextra -O2 -g")
-include_directories("${CMAKE_SOURCE_DIR}/include")
+include_directories(BEFORE "${CMAKE_SOURCE_DIR}/include"
+                           "${CMAKE_CURRENT_BINARY_DIR}/../include")
 
 add_executable(speed speed.c)
 target_include_directories(speed PRIVATE "${RPIMEMMGR_INCLUDE_DIRS}")

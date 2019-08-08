@@ -1,6 +1,7 @@
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -W -Wall -Wextra -pipe -O2 -g \
                    ${VCSM_CFLAGS} ${MAILBOX_CFLAGS}")
-include_directories(${CMAKE_SOURCE_DIR}/include)
+include_directories(BEFORE "${CMAKE_SOURCE_DIR}/include"
+                           "${CMAKE_CURRENT_BINARY_DIR}/../include")
 
 set(rpimemmgr_SOURCES rpimemmgr.c vcsm.c mailbox.c cache.c unif.c)
 add_library(rpimemmgr        SHARED ${rpimemmgr_SOURCES})

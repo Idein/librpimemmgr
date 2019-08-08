@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Idein Inc. ( http://idein.jp/ )
+ * Copyright (c) 2018,2019 Idein Inc. ( http://idein.jp/ )
  * All rights reserved.
  *
  * This software is licensed under a Modified (3-Clause) BSD License.
@@ -14,8 +14,13 @@
 #include <mailbox.h>
 #include <sys/types.h>
 
+#cmakedefine RPIMEMMGR_VCSM_HAS_CMA
+
     struct rpimemmgr {
         struct rpimemmgr_priv *priv;
+#ifdef RPIMEMMGR_VCSM_HAS_CMA
+        _Bool vcsm_use_cma;
+#endif /* RPIMEMMGR_VCSM_HAS_CMA */
     };
 
     enum rpimemmgr_cache_op {
