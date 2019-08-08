@@ -289,7 +289,7 @@ int rpimemmgr_alloc_mailbox(const size_t size, const size_t align,
          */
         const int fd = open("/dev/mem", O_RDWR | O_SYNC);
         if (fd == -1) {
-            print_error("open: %s\n", strerror(errno));
+            print_error("open: /dev/mem: %s\n", strerror(errno));
             goto clean_mb;
         }
         sp->priv->fd_mem = fd;
