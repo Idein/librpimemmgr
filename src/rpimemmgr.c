@@ -178,6 +178,9 @@ int rpimemmgr_init(struct rpimemmgr *sp)
     priv->busaddr_based_root = NULL;
     priv->usraddr_based_root = NULL;
     sp->priv = priv;
+#ifdef RPIMEMMGR_VCSM_HAS_CMA
+    sp->vcsm_use_cma = 0;
+#endif /* RPIMEMMGR_VCSM_HAS_CMA */
     return 0;
 }
 
@@ -235,7 +238,11 @@ int rpimemmgr_alloc_vcsm(const size_t size, const size_t align,
     }
 
     if (!sp->priv->is_vcsm_inited) {
+#ifdef RPIMEMMGR_VCSM_HAS_CMA
+        err = vcsm_init_ex(sp->vcsm_use_cma, -1);
+#else
         err = vcsm_init();
+#endif /* RPIMEMMGR_VCSM_HAS_CMA */
         if (err) {
             print_error("Failed to initialize VCSM\n");
             return err;

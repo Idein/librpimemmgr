@@ -88,106 +88,169 @@ clean_none:
     return err;
 }
 
-static int test_vcsm(const size_t size, const VCSM_CACHE_TYPE_T cache_type,
-        struct rpimemmgr *sp)
+static int test_vcsm(const size_t size, const VCSM_CACHE_TYPE_T cache_type)
 {
     void *dst, *src;
     int err = 0;
+    struct rpimemmgr st;
 
-    err = rpimemmgr_alloc_vcsm(size, 4096, cache_type, &dst, NULL, sp);
+    err = rpimemmgr_init(&st);
     if (err)
         goto clean_none;
 
-    err = rpimemmgr_alloc_vcsm(size, 4096, cache_type, &src, NULL, sp);
+    err = rpimemmgr_alloc_vcsm(size, 4096, cache_type, &dst, NULL, &st);
+    if (err)
+        goto clean_init;
+
+    err = rpimemmgr_alloc_vcsm(size, 4096, cache_type, &src, NULL, &st);
     if (err)
         goto clean_dst;
 
     test_speed_copy(size, dst, src);
 
-    err |= rpimemmgr_free_by_usraddr(src, sp);
+    err |= rpimemmgr_free_by_usraddr(src, &st);
 clean_dst:
-    err |= rpimemmgr_free_by_usraddr(dst, sp);
+    err |= rpimemmgr_free_by_usraddr(dst, &st);
+clean_init:
+    err |= rpimemmgr_finalize(&st);
 clean_none:
     return err;
 }
 
-static int test_mailbox(const size_t size, const uint32_t flags,
-        struct rpimemmgr *sp)
+#ifdef RPIMEMMGR_VCSM_HAS_CMA
+
+static int test_vcsm_cma(const size_t size, const VCSM_CACHE_TYPE_T cache_type)
 {
     void *dst, *src;
     int err = 0;
+    struct rpimemmgr st;
 
-    err = rpimemmgr_alloc_mailbox(size, 4096, flags, &dst, NULL, sp);
+    err = rpimemmgr_init(&st);
     if (err)
         goto clean_none;
 
-    err = rpimemmgr_alloc_mailbox(size, 4096, flags, &src, NULL, sp);
+    st.vcsm_use_cma = 1;
+
+    err = rpimemmgr_alloc_vcsm(size, 4096, cache_type, &dst, NULL, &st);
+    if (err)
+        goto clean_init;
+
+    err = rpimemmgr_alloc_vcsm(size, 4096, cache_type, &src, NULL, &st);
     if (err)
         goto clean_dst;
 
     test_speed_copy(size, dst, src);
 
-    err |= rpimemmgr_free_by_usraddr(src, sp);
+    err |= rpimemmgr_free_by_usraddr(src, &st);
 clean_dst:
-    err |= rpimemmgr_free_by_usraddr(dst, sp);
+    err |= rpimemmgr_free_by_usraddr(dst, &st);
+clean_init:
+    err |= rpimemmgr_finalize(&st);
+clean_none:
+    return err;
+}
+
+#endif /* RPIMEMMGR_VCSM_HAS_CMA */
+
+static int test_mailbox(const size_t size, const uint32_t flags)
+{
+    void *dst, *src;
+    int err = 0;
+    struct rpimemmgr st;
+
+    err = rpimemmgr_init(&st);
+    if (err)
+        goto clean_none;
+
+    err = rpimemmgr_alloc_mailbox(size, 4096, flags, &dst, NULL, &st);
+    if (err)
+        goto clean_init;
+
+    err = rpimemmgr_alloc_mailbox(size, 4096, flags, &src, NULL, &st);
+    if (err)
+        goto clean_dst;
+
+    test_speed_copy(size, dst, src);
+
+    err |= rpimemmgr_free_by_usraddr(src, &st);
+clean_dst:
+    err |= rpimemmgr_free_by_usraddr(dst, &st);
+clean_init:
+    err |= rpimemmgr_finalize(&st);
 clean_none:
     return err;
 }
 
 int main(void)
 {
-    const size_t size = 1UL<<24; /* 16 MiB */
-    struct rpimemmgr st;
+    const size_t size = 1ULL << 24; /* 16 MiB */
     int err;
 
-    printf("malloc:                    ");
+    printf("malloc:                       ");
     err = test_malloc(size);
     if (err)
         return err;
 
-    err = rpimemmgr_init(&st);
+    printf("VCSM (GPU): NONE:             ");
+    err = test_vcsm(size, VCSM_CACHE_TYPE_NONE);
+    if (err)
+        return err;
+    printf("VCSM (GPU): HOST:             ");
+    err = test_vcsm(size, VCSM_CACHE_TYPE_HOST);
+    if (err)
+        return err;
+    printf("VCSM (GPU): VC:               ");
+    err = test_vcsm(size, VCSM_CACHE_TYPE_VC);
+    if (err)
+        return err;
+    printf("VCSM (GPU): HOST_AND_VC:      ");
+    err = test_vcsm(size, VCSM_CACHE_TYPE_HOST_AND_VC);
     if (err)
         return err;
 
-    printf("VCSM:    NONE:             ");
-    err = test_vcsm(size, VCSM_CACHE_TYPE_NONE,        &st);
+#ifdef RPIMEMMGR_VCSM_HAS_CMA
+
+    printf("VCSM (CMA): NONE:             ");
+    err = test_vcsm_cma(size, VCSM_CACHE_TYPE_NONE);
     if (err)
         return err;
-    printf("VCSM:    HOST:             ");
-    err = test_vcsm(size, VCSM_CACHE_TYPE_HOST,        &st);
+    printf("VCSM (CMA): HOST:             ");
+    err = test_vcsm_cma(size, VCSM_CACHE_TYPE_HOST);
     if (err)
         return err;
-    printf("VCSM:    VC:               ");
-    err = test_vcsm(size, VCSM_CACHE_TYPE_VC,          &st);
+    printf("VCSM (CMA): VC:               ");
+    err = test_vcsm_cma(size, VCSM_CACHE_TYPE_VC);
     if (err)
         return err;
-    printf("VCSM:    HOST_AND_VC:      ");
-    err = test_vcsm(size, VCSM_CACHE_TYPE_HOST_AND_VC, &st);
+    printf("VCSM (CMA): HOST_AND_VC:      ");
+    err = test_vcsm_cma(size, VCSM_CACHE_TYPE_HOST_AND_VC);
     if (err)
         return err;
+
+#endif /* RPIMEMMGR_VCSM_HAS_CMA */
 
     /*
-    printf("Mailbox: NORMAL:           ");
-    err = test_mailbox(size, MEM_FLAG_NORMAL,           &st);
+    printf("Mailbox:    NORMAL:           ");
+    err = test_mailbox(size, MEM_FLAG_NORMAL, &st);
     if (err)
         return err;
     */
-    printf("Mailbox: DIRECT:           ");
-    err = test_mailbox(size, MEM_FLAG_DIRECT,           &st);
+    printf("Mailbox:    DIRECT:           ");
+    err = test_mailbox(size, MEM_FLAG_DIRECT);
     if (err)
         return err;
     /*
-    printf("Mailbox: COHERENT:         ");
-    err = test_mailbox(size, MEM_FLAG_COHERENT,         &st);
+    printf("Mailbox:    COHERENT:        ");
+    err = test_mailbox(size, MEM_FLAG_COHERENT, &st);
     if (err)
         return err;
     */
     if (rpimemmgr_is_bcm2835()) {
-        printf("Mailbox: L1_NONALLOCATING: ");
-        err = test_mailbox(size, MEM_FLAG_L1_NONALLOCATING, &st);
+        printf("Mailbox:    L1_NONALLOCATING: ");
+        err = test_mailbox(size, MEM_FLAG_L1_NONALLOCATING);
         if (err)
             return err;
     }
 
-    return rpimemmgr_finalize(&st);
+    return 0;
 }
