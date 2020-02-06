@@ -47,6 +47,8 @@
     int rpimemmgr_alloc_mailbox(const size_t size, const size_t align,
             const uint32_t flags, void **usraddrp, uint32_t *busaddrp,
             struct rpimemmgr *sp);
+    int rpimemmgr_alloc_drm(const size_t size, void **usraddrp,
+            uint32_t *busaddrp, struct rpimemmgr *sp);
 
     int rpimemmgr_free_by_usraddr(void * const usraddr, struct rpimemmgr *sp);
     int rpimemmgr_free_by_busaddr(const uint32_t busaddr, struct rpimemmgr *sp);
@@ -63,6 +65,9 @@
             const size_t stride);
 
     uint32_t rpimemmgr_usraddr_to_busaddr(const void * const usraddr,
+            struct rpimemmgr *sp);
+
+    uint32_t rpimemmgr_usraddr_to_handle(const void * const usraddr,
             struct rpimemmgr *sp);
 
     void unif_set_uint(uint32_t *p, const uint32_t u);
