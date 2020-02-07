@@ -47,11 +47,9 @@ typedef struct {
 int alloc_mem_drm(const int fd_drm, const size_t size, uint32_t *handlep,
         uint32_t *busaddrp, void **usraddrp)
 {
-    const _Bool do_mapping = (usraddrp != NULL);
-
     uint32_t handle = 0;
     uint32_t busaddr = 0;
-    void *usraddr = NULL;
+    void* usraddr = NULL;
 
     {
         drm_v3d_create_bo create_bo;
@@ -66,7 +64,7 @@ int alloc_mem_drm(const int fd_drm, const size_t size, uint32_t *handlep,
         busaddr = create_bo.offset;
     }
 
-    if (do_mapping) {
+    if (usraddrp != NULL) {
         drm_v3d_mmap_bo mmap_bo;
         mmap_bo.handle = handle;
         mmap_bo.flags = 0;
@@ -75,17 +73,16 @@ int alloc_mem_drm(const int fd_drm, const size_t size, uint32_t *handlep,
             print_error("Failed to map DRM memory to userland: %s\n", strerror(errno));
             goto clean_alloc;
         }
-        void* addr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd_drm, mmap_bo.offset);
-        if (addr == MAP_FAILED) {
+        usraddr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd_drm, mmap_bo.offset);
+        if (usraddr == MAP_FAILED) {
             print_error("Failed to map DRM memory to userland: %s\n", strerror(errno));
             goto clean_alloc;
         }
-        usraddr = addr;
+        *usraddrp = usraddr;
     }
 
     *handlep = handle;
     *busaddrp = busaddr;
-    *usraddrp = usraddr;
     return 0;
 
 clean_alloc:
