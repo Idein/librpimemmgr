@@ -466,3 +466,7 @@ uint32_t rpimemmgr_usraddr_to_handle(const void * const usraddr,
 
     return node->handle;
 }
+
+int rpimemmgr_borrow_drm_fd(struct rpimemmgr *sp) {
+    return sp->priv->fd_drm;
+}

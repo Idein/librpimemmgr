@@ -70,6 +70,8 @@
     uint32_t rpimemmgr_usraddr_to_handle(const void * const usraddr,
             struct rpimemmgr *sp);
 
+    int rpimemmgr_borrow_drm_fd(struct rpimemmgr *sp);
+
     void unif_set_uint(uint32_t *p, const uint32_t u);
     void unif_set_float(uint32_t *p, const float f);
     void unif_add_uint(const uint32_t u, uint32_t **pp);
