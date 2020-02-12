@@ -28,6 +28,12 @@
     int free_mem_mailbox(const int fd_mb, const size_t size,
             const uint32_t handle, const uint32_t busaddr, void *usraddr);
 
+    /* drm.c */
+    int alloc_mem_drm(const int fd_drm, const size_t size, uint32_t *handlep,
+            uint32_t *busaddrp, void **usraddrp);
+    int free_mem_drm(const int fd_drm, const size_t size, const uint32_t handle,
+            void *usraddr);
+
 #define print_error(fmt, ...) \
         do { \
             fprintf(stderr, "%s:%d:%s: error: " fmt, \

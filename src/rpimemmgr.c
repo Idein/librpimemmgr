@@ -23,7 +23,7 @@
 
 struct rpimemmgr_priv {
     _Bool is_vcsm_inited;
-    int fd_mb, fd_mem;
+    int fd_mb, fd_mem, fd_drm;
     void *busaddr_based_root;
     void *usraddr_based_root;
 };
@@ -32,6 +32,7 @@ struct mem_elem {
     enum mem_elem_type{
         MEM_TYPE_VCSM    = 1<<0,
         MEM_TYPE_MAILBOX = 1<<1,
+        MEM_TYPE_DRM     = 1<<2,
     } type;
     size_t size;
     uint32_t handle, busaddr;
@@ -80,6 +81,9 @@ static int free_elem(struct mem_elem *ep, struct rpimemmgr *sp)
         case MEM_TYPE_MAILBOX:
             return free_mem_mailbox(sp->priv->fd_mb, ep->size, ep->handle,
                     ep->busaddr, (void*)ep->usraddr);
+        case MEM_TYPE_DRM:
+            return free_mem_drm(sp->priv->fd_drm, ep->size, ep->handle,
+                    (void*)ep->usraddr);
         default:
             print_error("Unknown memory type: 0x%08x\n", ep->type);
             return 1;
@@ -175,6 +179,7 @@ int rpimemmgr_init(struct rpimemmgr *sp)
     priv->is_vcsm_inited = 0;
     priv->fd_mb = -1;
     priv->fd_mem = -1;
+    priv->fd_drm = -1;
     priv->busaddr_based_root = NULL;
     priv->usraddr_based_root = NULL;
     sp->priv = priv;
@@ -213,6 +218,15 @@ int rpimemmgr_finalize(struct rpimemmgr *sp)
 
     if (sp->priv->fd_mem != -1) {
         err = close(sp->priv->fd_mem);
+        if (err) {
+            print_error("close: %s\n", strerror(errno));
+            err_sum = err;
+            /* Continue finalization. */
+        }
+    }
+
+    if (sp->priv->fd_drm != -1) {
+        err = close(sp->priv->fd_drm);
         if (err) {
             print_error("close: %s\n", strerror(errno));
             err_sum = err;
@@ -329,6 +343,43 @@ clean_mb:
     return 1;
 }
 
+int rpimemmgr_alloc_drm(const size_t size, void **usraddrp, uint32_t *busaddrp, struct rpimemmgr *sp)
+{
+    uint32_t handle, busaddr;
+    void *usraddr;
+    int err;
+
+    if (sp == NULL) {
+        print_error("sp is NULL\n");
+        return 1;
+    }
+
+    if (sp->priv->fd_drm == -1) {
+        const int fd = open("/dev/dri/card0", O_RDWR);
+        if (fd == -1) {
+            print_error("open: /dev/dri/card0: %s\n", strerror(errno));
+            return fd;
+        }
+        sp->priv->fd_drm = fd;
+    }
+
+    err = alloc_mem_drm(sp->priv->fd_drm, size, &handle, &busaddr, &usraddr);
+    if (err)
+        return err;
+
+    err = register_mem(MEM_TYPE_DRM, size, handle, busaddr, usraddr, sp);
+    if (err) {
+        (void) free_mem_drm(handle, size, handle, usraddr);
+        return err;
+    }
+
+    if (usraddrp)
+        *usraddrp = usraddr;
+    if (busaddrp)
+        *busaddrp = busaddr;
+    return 0;
+}
+
 int rpimemmgr_free_by_busaddr(const uint32_t busaddr, struct rpimemmgr *sp)
 {
     void *node;
@@ -396,4 +447,26 @@ uint32_t rpimemmgr_usraddr_to_busaddr(const void * const usraddr,
     struct mem_elem* node = *(struct mem_elem**)found;
 
     return node->busaddr + (usraddr - node->usraddr);
+}
+
+uint32_t rpimemmgr_usraddr_to_handle(const void * const usraddr,
+        struct rpimemmgr *sp)
+{
+    struct mem_elem elem_key = {
+        .size = 0,
+        .usraddr = usraddr,
+    };
+    void* found = tfind(&elem_key, &sp->priv->usraddr_based_root,
+            find_busaddr_by_usraddr);
+    if (found == NULL) {
+        print_error("usraddr=%p is not found\n", usraddr);
+        return 0;
+    }
+    struct mem_elem* node = *(struct mem_elem**)found;
+
+    return node->handle;
+}
+
+int rpimemmgr_borrow_drm_fd(struct rpimemmgr *sp) {
+    return sp->priv->fd_drm;
 }

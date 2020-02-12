@@ -181,6 +181,35 @@ clean_none:
     return err;
 }
 
+static int test_drm(const size_t size)
+{
+    void *dst, *src;
+    int err = 0;
+    struct rpimemmgr st;
+
+    err = rpimemmgr_init(&st);
+    if (err)
+        goto clean_none;
+
+    err = rpimemmgr_alloc_drm(size, &dst, NULL, &st);
+    if (err)
+        goto clean_init;
+
+    err = rpimemmgr_alloc_drm(size, &src, NULL, &st);
+    if (err)
+        goto clean_dst;
+
+    test_speed_copy(size, dst, src);
+
+    err |= rpimemmgr_free_by_usraddr(src, &st);
+clean_dst:
+    err |= rpimemmgr_free_by_usraddr(dst, &st);
+clean_init:
+    err |= rpimemmgr_finalize(&st);
+clean_none:
+    return err;
+}
+
 int main(void)
 {
     const size_t size = 1ULL << 24; /* 16 MiB */
@@ -251,6 +280,11 @@ int main(void)
         if (err)
             return err;
     }
+
+    printf("DRM:                          ");
+    err = test_drm(size);
+    if (err)
+        return err;
 
     return 0;
 }

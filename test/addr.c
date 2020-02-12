@@ -90,6 +90,29 @@ static int test_mailbox(const uint32_t flags)
     return rpimemmgr_finalize(&st);
 }
 
+static int test_drm()
+{
+    uint32_t busaddr;
+    int err;
+    struct rpimemmgr st;
+
+    err = rpimemmgr_init(&st);
+    if (err)
+        return err;
+
+    err = rpimemmgr_alloc_drm(4096, NULL, &busaddr, &st);
+    if (err)
+        return err;
+
+    printf("busaddr=0x%08" PRIx32 "\n", busaddr);
+
+    err = rpimemmgr_free_by_busaddr(busaddr, &st);
+    if (err)
+        return err;
+
+    return rpimemmgr_finalize(&st);
+}
+
 int main(void)
 {
     int err;
@@ -146,6 +169,11 @@ int main(void)
         return err;
     printf("Mailbox: L1_NONALLOCATING: ");
     err = test_mailbox(MEM_FLAG_L1_NONALLOCATING);
+    if (err)
+        return err;
+
+    printf("DRM:                       ");
+    err = test_drm();
     if (err)
         return err;
 
