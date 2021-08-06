@@ -213,7 +213,21 @@ clean_none:
 int main(void)
 {
     const size_t size = 1ULL << 24; /* 16 MiB */
+    struct rpimemmgr st;
+    int processor;
     int err;
+
+    err = rpimemmgr_init(&st);
+    if (err)
+        return err;
+
+    processor = rpimemmgr_get_processor(&st);
+    if (processor < 0)
+        err = 1;
+
+    err |= rpimemmgr_finalize(&st);
+    if (err)
+        return err;
 
     printf("malloc:                       ");
     err = test_malloc(size);
@@ -258,33 +272,23 @@ int main(void)
 
 #endif /* RPIMEMMGR_VCSM_HAS_CMA */
 
-    /*
-    printf("Mailbox:    NORMAL:           ");
-    err = test_mailbox(size, MEM_FLAG_NORMAL, &st);
-    if (err)
-        return err;
-    */
     printf("Mailbox:    DIRECT:           ");
     err = test_mailbox(size, MEM_FLAG_DIRECT);
     if (err)
         return err;
-    /*
-    printf("Mailbox:    COHERENT:        ");
-    err = test_mailbox(size, MEM_FLAG_COHERENT, &st);
-    if (err)
-        return err;
-    */
-    if (rpimemmgr_is_bcm2835()) {
+    if (processor == 0) { /* BCM2835 */
         printf("Mailbox:    L1_NONALLOCATING: ");
         err = test_mailbox(size, MEM_FLAG_L1_NONALLOCATING);
         if (err)
             return err;
     }
 
-    printf("DRM:                          ");
-    err = test_drm(size);
-    if (err)
-        return err;
+    if (processor == 3) { /* BCM2711 */
+        printf("DRM:                          ");
+        err = test_drm(size);
+        if (err)
+            return err;
+    }
 
     return 0;
 }
