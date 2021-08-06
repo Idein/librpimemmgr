@@ -8,7 +8,7 @@ set(CPACK_PACKAGE_CONTACT "Sugizaki Yukimasa <ysugi@idein.jp>")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "A memory manager for Raspberry Pi")
 
 # See https://semver.org/ and https://www.pakin.org/~scott/ltver.html .
-set(CPACK_PACKAGE_VERSION_MAJOR 3)
+set(CPACK_PACKAGE_VERSION_MAJOR 4)
 set(CPACK_PACKAGE_VERSION_MINOR 0)
 set(CPACK_PACKAGE_VERSION_PATCH 0)
 
@@ -18,18 +18,6 @@ endif ()
 include(CPack)
 
 find_package(PkgConfig)
-
-pkg_check_modules(BCM_HOST bcm_host=1)
-if (NOT BCM_HOST_FOUND)
-    message(STATUS "Adding /opt/vc/lib/pkgconfig to PKG_CONFIG_PATH")
-    set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:/opt/vc/lib/pkgconfig")
-    pkg_check_modules(BCM_HOST bcm_host=1)
-    if (NOT BCM_HOST_FOUND)
-        message (FATAL_ERROR "bcm_host not found even in /opt/vc/lib. "
-                             "Building on non-RPi host? "
-                             "Please specify PKG_CONFIG_PATH.")
-    endif ()
-endif ()
 
 pkg_check_modules(VCSM vcsm=1)
 if (NOT VCSM_FOUND)

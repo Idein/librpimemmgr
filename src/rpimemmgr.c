@@ -238,6 +238,19 @@ int rpimemmgr_finalize(struct rpimemmgr *sp)
     return err_sum;
 }
 
+int rpimemmgr_get_processor(struct rpimemmgr *sp) {
+    if (sp->priv->fd_mb == -1) {
+        const int fd = mailbox_open();
+        if (fd == -1) {
+            print_error("Failed to open Mailbox\n");
+            return -1;
+        }
+        sp->priv->fd_mb = fd;
+    }
+
+    return get_processor_by_fd(sp->priv->fd_mb);
+}
+
 int rpimemmgr_alloc_vcsm(const size_t size, const size_t align,
         const VCSM_CACHE_TYPE_T cache_type, void **usraddrp, uint32_t *busaddrp,
         struct rpimemmgr *sp)

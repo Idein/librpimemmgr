@@ -115,67 +115,83 @@ static int test_drm()
 
 int main(void)
 {
+    struct rpimemmgr st;
+    int processor;
     int err;
 
-    printf("VCSM (GPU):    NONE:             ");
+    err = rpimemmgr_init(&st);
+    if (err)
+        return err;
+
+    processor = rpimemmgr_get_processor(&st);
+    if (processor < 0)
+        err = 1;
+
+    err |= rpimemmgr_finalize(&st);
+    if (err)
+        return err;
+
+    printf("VCSM (GPU): NONE:             ");
     err = test_vcsm_gpu(VCSM_CACHE_TYPE_NONE);
     if (err)
         return err;
-    printf("VCSM (GPU):    HOST:             ");
+    printf("VCSM (GPU): HOST:             ");
     err = test_vcsm_gpu(VCSM_CACHE_TYPE_HOST);
     if (err)
         return err;
-    printf("VCSM (GPU):    VC:               ");
+    printf("VCSM (GPU): VC:               ");
     err = test_vcsm_gpu(VCSM_CACHE_TYPE_VC);
     if (err)
         return err;
-    printf("VCSM (GPU):    HOST_AND_VC:      ");
+    printf("VCSM (GPU): HOST_AND_VC:      ");
     err = test_vcsm_gpu(VCSM_CACHE_TYPE_HOST_AND_VC);
     if (err)
         return err;
 
 #ifdef RPIMEMMGR_VCSM_HAS_CMA
 
-    printf("VCSM (CMA):    NONE:             ");
+    printf("VCSM (CMA): NONE:             ");
     err = test_vcsm_cma(VCSM_CACHE_TYPE_NONE);
     if (err)
         return err;
-    printf("VCSM (CMA):    HOST:             ");
+    printf("VCSM (CMA): HOST:             ");
     err = test_vcsm_cma(VCSM_CACHE_TYPE_HOST);
     if (err)
         return err;
-    printf("VCSM (CMA):    VC:               ");
+    printf("VCSM (CMA): VC:               ");
     err = test_vcsm_cma(VCSM_CACHE_TYPE_VC);
     if (err)
         return err;
-    printf("VCSM (CMA):    HOST_AND_VC:      ");
+    printf("VCSM (CMA): HOST_AND_VC:      ");
     err = test_vcsm_cma(VCSM_CACHE_TYPE_HOST_AND_VC);
     if (err)
         return err;
 
 #endif /* RPIMEMMGR_VCSM_HAS_CMA */
 
-    printf("Mailbox: NORMAL:           ");
+    printf("Mailbox:    NORMAL:           ");
     err = test_mailbox(MEM_FLAG_NORMAL);
     if (err)
         return err;
-    printf("Mailbox: DIRECT:           ");
+    printf("Mailbox:    DIRECT:           ");
     err = test_mailbox(MEM_FLAG_DIRECT);
     if (err)
         return err;
-    printf("Mailbox: COHERENT:         ");
+    printf("Mailbox:    COHERENT:         ");
     err = test_mailbox(MEM_FLAG_COHERENT);
     if (err)
         return err;
-    printf("Mailbox: L1_NONALLOCATING: ");
+    printf("Mailbox:    L1_NONALLOCATING: ");
     err = test_mailbox(MEM_FLAG_L1_NONALLOCATING);
     if (err)
         return err;
 
-    printf("DRM:                       ");
-    err = test_drm();
-    if (err)
-        return err;
+    if (processor == 3) { /* BCM2711 */
+        printf("DRM:                          ");
+        err = test_drm();
+        if (err)
+            return err;
+    }
 
     return 0;
 }

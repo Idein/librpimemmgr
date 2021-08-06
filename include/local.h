@@ -22,6 +22,7 @@
     int free_mem_vcsm(const uint32_t handle, void *usraddr);
 
     /* mailbox.c */
+    int get_processor_by_fd(const int fd_mb);
     int alloc_mem_mailbox(const int fd_mb, const int fd_mem, const size_t size,
             const size_t align, const uint32_t flags, uint32_t *handlep,
             uint32_t *busaddrp, void **usraddrp);

@@ -31,7 +31,14 @@
     int rpimemmgr_init(struct rpimemmgr *sp);
     int rpimemmgr_finalize(struct rpimemmgr *sp);
 
-    _Bool rpimemmgr_is_bcm2835(void);
+    /*
+     * 0:   BCM2835 (VideoCore IV)
+     * 1:   BCM2836 (VideoCore IV)
+     * 2:   BCM2837 (VideoCore IV)
+     * 3:   BCM2711 (VideoCore VI)
+     * < 0: An error has occured.
+     */
+    int rpimemmgr_get_processor(struct rpimemmgr *sp);
 
     /*
      * If usraddrp is NULL, then memory will NOT be mapped to userland.  This is

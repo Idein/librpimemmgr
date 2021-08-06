@@ -10,7 +10,6 @@
 #include "rpimemmgr.h"
 #include "local.h"
 #include <mailbox.h>
-#include <bcm_host.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/mman.h>
@@ -29,11 +28,9 @@
  * aliasing.  That's why BCM2835 cannot have memory more than 512MiB!
  * map_offset is used as: phyaddr = BUS_TO_PHYS(busaddr + map_offset)
  *
- * Note that on VC5 no bits in address will be dedicated for memory type because
- * there will be a MMU on GPU.
- */
-
-/*
+ * Note that on VC6 (BCM2711) no bit in an address is dedicated for memory type
+ * since an MMU is introduced also on GPU.
+ *
  * The most significant 3 bits of bus address with VCSM will be:
  * +-------------+---------+------------------+
  * |             | BCM2835 | BCM2836, BCM2837 |
@@ -48,41 +45,41 @@
  * +------------------+---------+------------------+
  * |                  | BCM2835 | BCM2836, BCM2837 |
  * +------------------+---------+------------------+
- * | NORMAL           |   0b00 |            0b00x |
- * | DIRECT           |   0b01 |            0b11x |
- * | COHERENT         |   0b10 |            0b10x |
- * | L1_NONALLOCATING |   0b11 |            0b10x |
+ * | NORMAL           |   0b00  |            0b00x |
+ * | DIRECT           |   0b01  |            0b11x |
+ * | COHERENT         |   0b10  |            0b10x |
+ * | L1_NONALLOCATING |   0b11  |            0b10x |
  * +------------------+---------+------------------+
- */
-
-/*
- * With bcm_host, we can get:
- * +--------------------+------------+------------------+
- * |                    | BCM2835    | BCM2836, BCM2837 |
- * +--------------------+------------+------------------+
- * | sdram_address      | 0x40000000 |       0xc0000000 |
- * | peripheral_address | 0x20000000 |       0x3f000000 |
- * | peripheral_size    | 0x01000000 |       0x01000000 |
- * +--------------------+------------+------------------+
  */
 
 /* Derived from hello_fft: http://www.aholme.co.uk/GPU_FFT/Main.htm . */
 #define BUS_TO_PHYS(x) ((x)&~0xC0000000)
 
 #define MEM_FLAG_MASK MEM_FLAG_L1_NONALLOCATING
-#define SDRAM_ADDRESS_BCM2835 0x40000000
 
-_Bool rpimemmgr_is_bcm2835(void)
-{
-    unsigned sdram_address;
+int get_processor_by_fd(const int fd_mb) {
+    uint32_t board_revision;
+    int err;
 
-    bcm_host_init();
-    sdram_address = bcm_host_get_sdram_address();
-    bcm_host_deinit();
+    err = mailbox_get_board_revision(fd_mb, &board_revision);
+    if (err) {
+        print_error("Failed to get board revision\n");
+        return -1;
+    }
 
-    if (sdram_address == SDRAM_ADDRESS_BCM2835)
-        return !0;
-    return 0;
+    /*
+     * Refer to
+     * https://www.raspberrypi.org/documentation/hardware/raspberrypi/revision-codes
+     * for the meaning of the bits.
+     */
+
+    if (!(board_revision >> 23 & 1)) {
+        print_error("Revision code style is old. " \
+                "Please upgrade the firmware\n");
+        return -1;
+    }
+
+    return board_revision >> 12 & 0xf;
 }
 
 int alloc_mem_mailbox(const int fd_mb, const int fd_mem, const size_t size,
@@ -93,15 +90,18 @@ int alloc_mem_mailbox(const int fd_mb, const int fd_mem, const size_t size,
     void *usraddr;
     uint32_t map_offset = 0;
     const _Bool do_mapping = (usraddrp != NULL);
-    const _Bool is_bcm2835 = rpimemmgr_is_bcm2835();
 
     if (handlep == NULL && busaddrp == NULL && usraddrp == NULL) {
         print_error("Cannot return pointer\n");
         return 1;
     }
 
+    const int processor = get_processor_by_fd(fd_mb);
+    if (processor < -1)
+        return 1;
+
     if (do_mapping) {
-        if (is_bcm2835) { /* BCM2835 */
+        if (processor == 0) { /* BCM2835 */
             switch (flags & MEM_FLAG_MASK) {
                 case MEM_FLAG_DIRECT:
                     map_offset = 0x20000000;
@@ -116,9 +116,10 @@ int alloc_mem_mailbox(const int fd_mb, const int fd_mem, const size_t size,
                             "DIRECT, L1_NONALLOCATING\n");
                     return 1;
             }
-        } else { /* BCM2836, BCM2837 */
+        } else { /* BCM2836, BCM2837, BCM2711 */
             if ((flags & MEM_FLAG_MASK) != MEM_FLAG_DIRECT) {
-                print_error("flags must be DIRECT on BCM2836 and BCM2837\n");
+                print_error("flags must be DIRECT on " \
+                        "BCM2836, BCM2837, and BCM2711\n");
                 return 1;
             }
             map_offset = 0x00000000;
@@ -138,7 +139,7 @@ int alloc_mem_mailbox(const int fd_mb, const int fd_mem, const size_t size,
     }
 
     if (do_mapping) {
-        if (is_bcm2835 && (busaddr & 0x20000000)) {
+        if (processor == 0 && (busaddr & 0x20000000)) {
             print_error("The third significant bit is set to busaddr " \
                     "on BCM2835: 0x%08x\n", busaddr);
             goto clean_lock;
