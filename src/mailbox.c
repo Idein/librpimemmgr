@@ -10,6 +10,7 @@
 #include "rpimemmgr.h"
 #include "local.h"
 #include <mailbox.h>
+#include <stdbool.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/mman.h>
@@ -89,7 +90,7 @@ int alloc_mem_mailbox(const int fd_mb, const int fd_mem, const size_t size,
     uint32_t handle, busaddr;
     void *usraddr;
     uint32_t map_offset = 0;
-    const _Bool do_mapping = (usraddrp != NULL);
+    const bool do_mapping = (usraddrp != NULL);
 
     if (handlep == NULL && busaddrp == NULL && usraddrp == NULL) {
         print_error("Cannot return pointer\n");

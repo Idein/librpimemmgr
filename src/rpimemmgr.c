@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -22,7 +23,7 @@
 #include <sys/types.h>
 
 struct rpimemmgr_priv {
-    _Bool is_vcsm_inited;
+    bool is_vcsm_inited;
     int fd_mb, fd_mem, fd_drm;
     void *busaddr_based_root;
     void *usraddr_based_root;
@@ -299,7 +300,7 @@ int rpimemmgr_alloc_mailbox(const size_t size, const size_t align,
         struct rpimemmgr *sp)
 {
     uint32_t handle, busaddr;
-    const _Bool do_mapping = (usraddrp != NULL);
+    const bool do_mapping = (usraddrp != NULL);
     int err;
 
     if (sp == NULL) {

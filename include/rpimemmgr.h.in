@@ -12,6 +12,7 @@
 
 #include <interface/vcsm/user-vcsm.h>
 #include <mailbox.h>
+#include <stdbool.h>
 #include <sys/types.h>
 
 #cmakedefine RPIMEMMGR_VCSM_HAS_CMA
@@ -19,7 +20,7 @@
     struct rpimemmgr {
         struct rpimemmgr_priv *priv;
 #ifdef RPIMEMMGR_VCSM_HAS_CMA
-        _Bool vcsm_use_cma;
+        bool vcsm_use_cma;
 #endif /* RPIMEMMGR_VCSM_HAS_CMA */
     };
 
