@@ -186,6 +186,7 @@ int rpimemmgr_init(struct rpimemmgr *sp)
     sp->priv = priv;
 #ifdef RPIMEMMGR_VCSM_HAS_CMA
     sp->vcsm_use_cma = 0;
+    sp->vcsm_fd = -1;
 #endif /* RPIMEMMGR_VCSM_HAS_CMA */
     return 0;
 }
@@ -267,7 +268,7 @@ int rpimemmgr_alloc_vcsm(const size_t size, const size_t align,
 
     if (!sp->priv->is_vcsm_inited) {
 #ifdef RPIMEMMGR_VCSM_HAS_CMA
-        err = vcsm_init_ex(sp->vcsm_use_cma, -1);
+        err = vcsm_init_ex(sp->vcsm_use_cma, sp->vcsm_fd);
 #else
         err = vcsm_init();
 #endif /* RPIMEMMGR_VCSM_HAS_CMA */

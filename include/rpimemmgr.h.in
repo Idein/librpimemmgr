@@ -21,6 +21,7 @@
         struct rpimemmgr_priv *priv;
 #ifdef RPIMEMMGR_VCSM_HAS_CMA
         bool vcsm_use_cma;
+        int vcsm_fd;
 #endif /* RPIMEMMGR_VCSM_HAS_CMA */
     };
 
