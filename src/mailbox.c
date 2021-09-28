@@ -74,13 +74,13 @@ int get_processor_by_fd(const int fd_mb) {
      * for the meaning of the bits.
      */
 
-    if (!(board_revision >> 23 & 1)) {
-        print_error("Revision code style is old. " \
-                "Please upgrade the firmware\n");
-        return -1;
+    if (board_revision >> 23 & 1) {
+        /* Dedicated bit fields in the new-style code. */
+        return board_revision >> 12 & 0xf;
     }
 
-    return board_revision >> 12 & 0xf;
+    /* Only BCM2835 boards use the old-style code. */
+    return 0;
 }
 
 int alloc_mem_mailbox(const int fd_mb, const int fd_mem, const size_t size,
