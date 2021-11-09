@@ -1,19 +1,19 @@
-set(RPIMEMMGR_INCLUDE_DIRS "${VCSM_INCLUDE_DIRS}" "${MAILBOX_INCLUDE_DIRS}")
-set(RPIMEMMGR_CFLAGS_OTHER "${VCSM_CFLAGS_OTHER}" "${MAILBOX_CFLAGS_OTHER}")
-set(RPIMEMMGR_LDFLAGS "${VCSM_LDFLAGS}" "${MAILBOX_LDFLAGS}")
+include(CTest)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pipe -W -Wall -Wextra -O2 -g")
-include_directories(BEFORE "${CMAKE_SOURCE_DIR}/include"
-                           "${CMAKE_CURRENT_BINARY_DIR}/../include")
+if (NOT BUILD_TESTING)
+    return()
+endif ()
 
-add_executable(speed speed.c)
-target_include_directories(speed PRIVATE "${RPIMEMMGR_INCLUDE_DIRS}")
-target_compile_options(speed PRIVATE "${RPIMEMMGR_CFLAGS_OTHER}")
-target_link_libraries(speed rpimemmgr "${RPIMEMMGR_LDFLAGS}")
-add_test(Speed speed)
+include_directories(${CMAKE_SOURCE_DIR}/include
+                    ${CMAKE_CURRENT_BINARY_DIR}/../include)
+add_compile_options(-pipe -W -Wall -Wextra -O2 -g)
 
-add_executable(addr addr.c)
-target_include_directories(addr PRIVATE "${RPIMEMMGR_INCLUDE_DIRS}")
-target_compile_options(addr PRIVATE "${RPIMEMMGR_CFLAGS_OTHER}")
-target_link_libraries(addr rpimemmgr "${RPIMEMMGR_LDFLAGS}")
-add_test(Addr addr)
+foreach (test IN ITEMS addr speed)
+    add_executable(${test} ${test}.c)
+    target_include_directories(${test} PUBLIC ${VCSM_INCLUDE_DIRS}
+                                              ${MAILBOX_INCLUDE_DIRS})
+    target_compile_options(${test} PUBLIC ${VCSM_CFLAGS_OTHER}
+                                          ${MAILBOX_CFLAGS_OTHER})
+    target_link_libraries(${test} rpimemmgr ${VCSM_LDFLAGS} ${MAILBOX_LDFLAGS})
+    add_test(${test} ${test})
+endforeach ()
