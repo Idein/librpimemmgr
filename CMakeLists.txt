@@ -9,7 +9,7 @@ set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 set(CPACK_PACKAGE_CONTACT "Yukimasa Sugizaki <ysugi@idein.jp>")
 set(CPACK_GENERATOR DEB)
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6, libraspberrypi-dev, libmailbox (>= 2.0.0)")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6, libdrm2, libraspberrypi-dev, libmailbox (>= 2.0.0)")
 
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX /usr CACHE PATH "Install prefix" FORCE)
@@ -20,6 +20,8 @@ message(STATUS "Install prefix is set to ${CMAKE_INSTALL_PREFIX}")
 include(CPack)
 
 find_package(PkgConfig)
+
+pkg_check_modules(DRM REQUIRED libdrm)
 
 pkg_check_modules(VCSM vcsm=1)
 if (NOT VCSM_FOUND)

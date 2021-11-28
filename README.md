@@ -6,11 +6,16 @@ DRM on Raspberry Pi.
 
 ## Requirements
 
-- To build and use librpimemmgr, you need to install
-  [mailbox](https://github.com/Terminus-IMRC/mailbox) in advance.
-- Depending on which subsystem you use, you additionally need to:
+- You need to install the development package of
+  [libdrm](https://gitlab.freedesktop.org/mesa/drm) by running `apt-get install
+  libdrm-dev`.
+- The [mailbox](https://github.com/Terminus-IMRC/mailbox) library is also
+  needed.  Refer to its README file for install instruction.
+- Depending on which subsystem you use to allocate memory, you additionally need
+  to:
   - be `root` user to use Mailbox functions.
-  - belong to `video` group **or** be `root` user to use VCSM functions.
+  - belong to `video` group **or** be `root` user to use VCSM and V3D DRM
+    functions.
 
 
 ## Installation

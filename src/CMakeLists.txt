@@ -1,6 +1,6 @@
 include_directories(${CMAKE_SOURCE_DIR}/include
                     ${CMAKE_CURRENT_BINARY_DIR}/../include)
-add_compile_options(-W -Wall -Wextra -pipe -O2 -g ${VCSM_CFLAGS}
+add_compile_options(-W -Wall -Wextra -pipe -O2 -g ${DRM_CFLAGS} ${VCSM_CFLAGS}
                     ${MAILBOX_CFLAGS})
 
 set(rpimemmgr_SOURCES rpimemmgr.c vcsm.c mailbox.c cache.c unif.c drm.c)

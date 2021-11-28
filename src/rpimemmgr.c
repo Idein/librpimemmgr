@@ -9,6 +9,7 @@
 
 #include "rpimemmgr.h"
 #include "local.h"
+#include <xf86drm.h>
 #include <interface/vcsm/user-vcsm.h>
 #include <mailbox.h>
 #include <stdio.h>
@@ -370,9 +371,9 @@ int rpimemmgr_alloc_drm(const size_t size, void **usraddrp, uint32_t *busaddrp, 
     }
 
     if (sp->priv->fd_drm == -1) {
-        const int fd = open("/dev/dri/card0", O_RDWR);
+        const int fd = drmOpen("v3d", NULL);
         if (fd == -1) {
-            print_error("open: /dev/dri/card0: %s\n", strerror(errno));
+            print_error("drmOpen returned -1\n");
             return fd;
         }
         sp->priv->fd_drm = fd;
