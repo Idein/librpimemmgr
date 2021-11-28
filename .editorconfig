@@ -11,6 +11,10 @@ max_line_length=80
 indent_style = space
 indent_size = 4
 
+[/include/v3d_drm.h]
+indent_style = tab
+indent_size = 8
+
 [*{CMakeLists.txt,.cmake}]
 indent_style = space
 indent_size = 4
