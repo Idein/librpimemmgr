@@ -1,7 +1,7 @@
 # For CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT.
 cmake_minimum_required(VERSION 3.7)
 
-project(librpimemmgr VERSION 4.1.1 LANGUAGES C
+project(librpimemmgr VERSION 5.0.0 LANGUAGES C
         DESCRIPTION "A memory manager for Raspberry Pi")
 
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${PROJECT_DESCRIPTION})
