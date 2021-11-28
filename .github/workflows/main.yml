@@ -1,0 +1,63 @@
+on: push
+
+jobs:
+
+  build-package:
+    runs-on: ubuntu-latest
+    container: debian:bullseye-slim
+    env:
+      librpimemmgr_version: 5.0.0
+    strategy:
+      matrix:
+        include:
+          - arch: armhf
+            triplet: arm-linux-gnueabihf
+            cflags: -mcpu=arm1176jzf-s -mtune=arm1176jzf-s -mfloat-abi=hard -marm -mfpu=vfp
+            libdrm-version: 2.4.104-1+rpi1
+            libdrm-base-url: https://archive.raspbian.org/raspbian/pool/main/libd/libdrm
+            libraspberrypi-version: 2+git20210928~141951+6e8f786-2
+            libraspberrypi-base-url: https://archive.raspberrypi.org/debian/pool/main/r/raspberrypi-userland
+            libmailbox-version: 3.1.1
+          - arch: arm64
+            triplet: aarch64-linux-gnu
+            cflags: -mcpu=cortex-a72 -mtune=cortex-a72
+            libdrm-version: 2.4.104-1
+            libdrm-base-url: https://ftp.debian.org/debian/pool/main/libd/libdrm
+            libraspberrypi-version: 2+git20210928~141951+6e8f786-2
+            libraspberrypi-base-url: https://archive.raspberrypi.org/debian/pool/main/r/raspberrypi-userland
+            libmailbox-version: 3.1.1
+    steps:
+      - name: Install development packages
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          dpkg --add-architecture '${{ matrix.arch }}'
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl pkg-config cmake 'crossbuild-essential-${{ matrix.arch }}'
+          apt-get clean
+          rm -rf /var/lib/apt/lists/*
+      - name: Prepare sysroot
+        env:
+          PKG_CONFIG_SYSROOT_DIR: /tmp/sysroot
+        run: |
+          curl -sL '${{ matrix.libdrm-base-url }}/libdrm2_${{ matrix.libdrm-version }}_${{ matrix.arch }}.deb' | dpkg-deb -x - "${PKG_CONFIG_SYSROOT_DIR}/"
+          curl -sL '${{ matrix.libdrm-base-url }}/libdrm-dev_${{ matrix.libdrm-version }}_${{ matrix.arch }}.deb' | dpkg-deb -x - "${PKG_CONFIG_SYSROOT_DIR}/"
+          curl -sL '${{ matrix.libraspberrypi-base-url }}/libraspberrypi0_${{ matrix.libraspberrypi-version }}_${{ matrix.arch }}.deb' | dpkg-deb -x - "${PKG_CONFIG_SYSROOT_DIR}/"
+          curl -sL '${{ matrix.libraspberrypi-base-url }}/libraspberrypi-dev_${{ matrix.libraspberrypi-version }}_${{ matrix.arch }}.deb' | dpkg-deb -x - "${PKG_CONFIG_SYSROOT_DIR}/"
+          curl -sL 'https://github.com/Terminus-IMRC/mailbox/releases/download/v${{ matrix.libmailbox-version }}/libmailbox_${{ matrix.libmailbox-version }}_${{ matrix.arch }}.deb' | dpkg-deb -x - "${PKG_CONFIG_SYSROOT_DIR}/"
+          echo "PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR}" >> "${GITHUB_ENV}"
+          echo "PKG_CONFIG_LIBDIR=${PKG_CONFIG_SYSROOT_DIR}/usr/lib/${{ matrix.triplet }}/pkgconfig" >> "${GITHUB_ENV}"
+          echo "PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1" >> "${GITHUB_ENV}"
+          echo "PKG_CONFIG_ALLOW_SYSTEM_LIBS=1" >> "${GITHUB_ENV}"
+      - name: Checkout source tree
+        uses: actions/checkout@v2
+      - name: Build package
+        run: |
+          cmake -B build/ -D BUILD_TESTING=FALSE -D CPACK_DEBIAN_PACKAGE_ARCHITECTURE='${{ matrix.arch }}' -D CMAKE_C_COMPILER='${{ matrix.triplet }}-gcc' -D CMAKE_C_FLAGS='${{ matrix.cflags }}'
+          cmake --build build/ -t package -v
+      - name: Upload package
+        uses: actions/upload-artifact@v2
+        with:
+          name: librpimemmgr-${{ env.librpimemmgr_version }}-${{ matrix.arch }}
+          path: build/librpimemmgr_${{ env.librpimemmgr_version }}_${{ matrix.arch }}.deb
+          if-no-files-found: error
