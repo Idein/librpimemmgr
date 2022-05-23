@@ -1,4 +1,12 @@
-on: push
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
 
@@ -61,3 +69,4 @@ jobs:
           name: librpimemmgr-${{ env.librpimemmgr_version }}-${{ matrix.arch }}
           path: build/librpimemmgr_${{ env.librpimemmgr_version }}_${{ matrix.arch }}.deb
           if-no-files-found: error
+          retention-days: 1
