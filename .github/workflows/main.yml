@@ -26,14 +26,6 @@ jobs:
             libraspberrypi-version: 2+git20210928~141951+6e8f786-2
             libraspberrypi-base-url: https://archive.raspberrypi.org/debian/pool/main/r/raspberrypi-userland
             libmailbox-version: 3.1.1
-          - arch: arm64
-            triplet: aarch64-linux-gnu
-            cflags: -mcpu=cortex-a72 -mtune=cortex-a72
-            libdrm-version: 2.4.104-1
-            libdrm-base-url: https://ftp.debian.org/debian/pool/main/libd/libdrm
-            libraspberrypi-version: 2+git20210928~141951+6e8f786-2
-            libraspberrypi-base-url: https://archive.raspberrypi.org/debian/pool/main/r/raspberrypi-userland
-            libmailbox-version: 3.1.1
     steps:
       - name: Install development packages
         env:
