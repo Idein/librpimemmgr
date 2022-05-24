@@ -9,40 +9,12 @@
 
 #include "rpimemmgr.h"
 #include "local.h"
+#include "v3d_drm.h"
+#include <drm.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-
-typedef struct {
-    uint32_t size;
-    uint32_t flags;
-    uint32_t handle;
-    uint32_t offset;
-} drm_v3d_create_bo;
-
-typedef struct {
-    uint32_t handle;
-    uint32_t flags;
-    uint64_t offset;
-} drm_v3d_mmap_bo;
-
-typedef struct {
-    uint32_t  handle;
-    uint32_t  pad;
-} gem_close;
-
-#define DRM_IOCTL_BASE   'd'
-#define DRM_COMMAND_BASE 0x40
-#define DRM_GEM_CLOSE    0x09
-
-#define DRM_V3D_WAIT_BO    (DRM_COMMAND_BASE + 0x01)
-#define DRM_V3D_CREATE_BO  (DRM_COMMAND_BASE + 0x02)
-#define DRM_V3D_MMAP_BO    (DRM_COMMAND_BASE + 0x03)
-
-#define IOCTL_GEM_CLOSE      _IOW(DRM_IOCTL_BASE, DRM_GEM_CLOSE, gem_close)
-#define IOCTL_V3D_CREATE_BO  _IOWR(DRM_IOCTL_BASE, DRM_V3D_CREATE_BO, drm_v3d_create_bo)
-#define IOCTL_V3D_MMAP_BO    _IOWR(DRM_IOCTL_BASE, DRM_V3D_MMAP_BO, drm_v3d_mmap_bo)
 
 int alloc_mem_drm(const int fd_drm, const size_t size, uint32_t *handlep,
         uint32_t *busaddrp, void **usraddrp)
@@ -52,10 +24,11 @@ int alloc_mem_drm(const int fd_drm, const size_t size, uint32_t *handlep,
     void* usraddr = NULL;
 
     {
-        drm_v3d_create_bo create_bo;
-        create_bo.size = size;
-        create_bo.flags = 0;
-        int res = ioctl(fd_drm, IOCTL_V3D_CREATE_BO, &create_bo);
+        struct drm_v3d_create_bo create_bo = {
+            .size = size,
+            .flags = 0,
+        };
+        int res = ioctl(fd_drm, DRM_IOCTL_V3D_CREATE_BO, &create_bo);
         if (res < 0) {
             print_error("Failed to allocate memory with DRM: %s\n", strerror(errno));
             return 1;
@@ -65,10 +38,11 @@ int alloc_mem_drm(const int fd_drm, const size_t size, uint32_t *handlep,
     }
 
     if (usraddrp != NULL) {
-        drm_v3d_mmap_bo mmap_bo;
-        mmap_bo.handle = handle;
-        mmap_bo.flags = 0;
-        int res = ioctl(fd_drm, IOCTL_V3D_MMAP_BO, &mmap_bo);
+        struct drm_v3d_mmap_bo mmap_bo = {
+            .handle = handle,
+            .flags = 0,
+        };
+        int res = ioctl(fd_drm, DRM_IOCTL_V3D_MMAP_BO, &mmap_bo);
         if (res < 0) {
             print_error("Failed to map DRM memory to userland: %s\n", strerror(errno));
             goto clean_alloc;
@@ -103,9 +77,10 @@ int free_mem_drm(const int fd_drm, const size_t size, const uint32_t handle, voi
         }
     }
 
-    gem_close cl;
-    cl.handle = handle;
-    err = ioctl(fd_drm, IOCTL_GEM_CLOSE, &cl);
+    struct drm_gem_close gem_close = {
+        .handle = handle,
+    };
+    err = ioctl(fd_drm, DRM_IOCTL_GEM_CLOSE, &gem_close);
     if (err < 0) {
         print_error("Failed to free memory with DRM\n");
         err_sum = errno;

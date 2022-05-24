@@ -1,17 +1,21 @@
 # `librpimemmgr`
 
-A library that manages memory on Raspberry Pi.
-
-`librpimemmgr` can allocate memory with VCSM (VideoCore Shared Memory) and/or
-Mailbox interface.
+A memory management library for Mailbox, VCSM (VideoCore Shared Memory), and V3D
+DRM on Raspberry Pi.
 
 
 ## Requirements
 
-- You need [mailbox](https://github.com/Terminus-IMRC/mailbox).
-- You need to be:
-  - belong to `video` group **or** be `root` user to use VCSM functions.
+- You need to install the development package of
+  [libdrm](https://gitlab.freedesktop.org/mesa/drm) by running `apt-get install
+  libdrm-dev`.
+- The [mailbox](https://github.com/Terminus-IMRC/mailbox) library is also
+  needed.  Refer to its README file for install instruction.
+- Depending on which subsystem you use to allocate memory, you additionally need
+  to:
   - be `root` user to use Mailbox functions.
+  - belong to `video` group **or** be `root` user to use VCSM and V3D DRM
+    functions.
 
 
 ## Installation
@@ -19,16 +23,9 @@ Mailbox interface.
 ```
 $ git clone https://github.com/Idein/librpimemmgr
 $ cd librpimemmgr/
-$ cmake .
-$ make
-$ sudo make install
-```
-
-Or you can create `.deb` package:
-
-```
-$ make package
-$ sudo dpkg -i librpimemmgr-x.y.z-system.deb
+$ cmake -B build/
+$ cmake --build build/ --target package
+$ sudo dpkg -i librpimemmgr-x.y.z-arch.deb
 ```
 
 

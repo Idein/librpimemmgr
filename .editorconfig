@@ -5,16 +5,23 @@ charset = utf-8
 end_of_line = lf
 trim_trailing_whitespace = true
 insert_final_newline = true
-max_line_length=80
 
 [*.{c,h,h.in}]
 indent_style = space
 indent_size = 4
+
+[/include/v3d_drm.h]
+indent_style = tab
+indent_size = 8
 
 [*{CMakeLists.txt,.cmake}]
 indent_style = space
 indent_size = 4
 
 [*.md]
+indent_style = space
+indent_size = 2
+
+[*.yml]
 indent_style = space
 indent_size = 2
