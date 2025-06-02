@@ -56,7 +56,7 @@ jobs:
           cmake -B build/ -D BUILD_TESTING=FALSE -D CPACK_DEBIAN_PACKAGE_ARCHITECTURE='${{ matrix.arch }}' -D CMAKE_C_COMPILER='${{ matrix.triplet }}-gcc' -D CMAKE_C_FLAGS='${{ matrix.cflags }}'
           cmake --build build/ -t package -v
       - name: Upload package
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: librpimemmgr-${{ env.librpimemmgr_version }}-${{ matrix.arch }}
           path: build/librpimemmgr_${{ env.librpimemmgr_version }}_${{ matrix.arch }}.deb
