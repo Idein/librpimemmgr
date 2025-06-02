@@ -10,7 +10,6 @@
 #include "rpimemmgr.h"
 #include "local.h"
 #include <xf86drm.h>
-#include <interface/vcsm/user-vcsm.h>
 #include <mailbox.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,7 +23,6 @@
 #include <sys/types.h>
 
 struct rpimemmgr_priv {
-    bool is_vcsm_inited;
     int fd_mb, fd_mem, fd_drm;
     void *busaddr_based_root;
     void *usraddr_based_root;
@@ -32,7 +30,6 @@ struct rpimemmgr_priv {
 
 struct mem_elem {
     enum mem_elem_type{
-        MEM_TYPE_VCSM    = 1<<0,
         MEM_TYPE_MAILBOX = 1<<1,
         MEM_TYPE_DRM     = 1<<2,
     } type;
@@ -78,8 +75,6 @@ static int free_elem(struct mem_elem *ep, struct rpimemmgr *sp)
     }
 
     switch (ep->type) {
-        case MEM_TYPE_VCSM:
-            return free_mem_vcsm(ep->handle, (void*)ep->usraddr);
         case MEM_TYPE_MAILBOX:
             return free_mem_mailbox(sp->priv->fd_mb, ep->size, ep->handle,
                     ep->busaddr, (void*)ep->usraddr);
@@ -178,17 +173,12 @@ int rpimemmgr_init(struct rpimemmgr *sp)
         return 1;
     }
 
-    priv->is_vcsm_inited = 0;
     priv->fd_mb = -1;
     priv->fd_mem = -1;
     priv->fd_drm = -1;
     priv->busaddr_based_root = NULL;
     priv->usraddr_based_root = NULL;
     sp->priv = priv;
-#ifdef RPIMEMMGR_VCSM_HAS_CMA
-    sp->vcsm_use_cma = 0;
-    sp->vcsm_fd = -1;
-#endif /* RPIMEMMGR_VCSM_HAS_CMA */
     return 0;
 }
 
@@ -206,9 +196,6 @@ int rpimemmgr_finalize(struct rpimemmgr *sp)
         err_sum = err;
         /* Continue finalization. */
     }
-
-    if (sp->priv->is_vcsm_inited)
-        vcsm_exit();
 
     if (sp->priv->fd_mb != -1) {
         err = mailbox_close(sp->priv->fd_mb);
@@ -252,49 +239,6 @@ int rpimemmgr_get_processor(struct rpimemmgr *sp) {
     }
 
     return get_processor_by_fd(sp->priv->fd_mb);
-}
-
-int rpimemmgr_alloc_vcsm(const size_t size, const size_t align,
-        const VCSM_CACHE_TYPE_T cache_type, void **usraddrp, uint32_t *busaddrp,
-        struct rpimemmgr *sp)
-{
-    uint32_t handle, busaddr;
-    void *usraddr;
-    int err;
-
-    if (sp == NULL) {
-        print_error("sp is NULL\n");
-        return 1;
-    }
-
-    if (!sp->priv->is_vcsm_inited) {
-#ifdef RPIMEMMGR_VCSM_HAS_CMA
-        err = vcsm_init_ex(sp->vcsm_use_cma, sp->vcsm_fd);
-#else
-        err = vcsm_init();
-#endif /* RPIMEMMGR_VCSM_HAS_CMA */
-        if (err) {
-            print_error("Failed to initialize VCSM\n");
-            return err;
-        }
-        sp->priv->is_vcsm_inited = !0;
-    }
-
-    err = alloc_mem_vcsm(size, align, cache_type, &handle, &busaddr, &usraddr);
-    if (err)
-        return err;
-
-    err = register_mem(MEM_TYPE_VCSM, size, handle, busaddr, usraddr, sp);
-    if (err) {
-        (void) free_mem_vcsm(handle, usraddr);
-        return err;
-    }
-
-    if (usraddrp)
-        *usraddrp = usraddr;
-    if (busaddrp)
-        *busaddrp = busaddr;
-    return 0;
 }
 
 int rpimemmgr_alloc_mailbox(const size_t size, const size_t align,

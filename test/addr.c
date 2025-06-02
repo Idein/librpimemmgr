@@ -15,58 +15,6 @@
 #include <sys/types.h>
 #include <inttypes.h>
 
-static int test_vcsm_gpu(const VCSM_CACHE_TYPE_T cache_type)
-{
-    uint32_t busaddr;
-    int err;
-    struct rpimemmgr st;
-
-    err = rpimemmgr_init(&st);
-    if (err)
-        return err;
-
-    err = rpimemmgr_alloc_vcsm(4096, 4096, cache_type, NULL, &busaddr, &st);
-    if (err)
-        return err;
-
-    printf("busaddr=0x%08" PRIx32 "\n", busaddr);
-
-    err = rpimemmgr_free_by_busaddr(busaddr, &st);
-    if (err)
-        return err;
-
-    return rpimemmgr_finalize(&st);
-}
-
-#ifdef RPIMEMMGR_VCSM_HAS_CMA
-
-static int test_vcsm_cma(const VCSM_CACHE_TYPE_T cache_type)
-{
-    uint32_t busaddr;
-    int err;
-    struct rpimemmgr st;
-
-    err = rpimemmgr_init(&st);
-    if (err)
-        return err;
-
-    st.vcsm_use_cma = 1;
-
-    err = rpimemmgr_alloc_vcsm(4096, 4096, cache_type, NULL, &busaddr, &st);
-    if (err)
-        return err;
-
-    printf("busaddr=0x%08" PRIx32 "\n", busaddr);
-
-    err = rpimemmgr_free_by_busaddr(busaddr, &st);
-    if (err)
-        return err;
-
-    return rpimemmgr_finalize(&st);
-}
-
-#endif /* RPIMEMMGR_VCSM_HAS_CMA */
-
 static int test_mailbox(const uint32_t flags)
 {
     uint32_t busaddr;
@@ -131,44 +79,6 @@ int main(void)
     if (err)
         return err;
 
-    printf("VCSM (GPU): NONE:             ");
-    err = test_vcsm_gpu(VCSM_CACHE_TYPE_NONE);
-    if (err)
-        return err;
-    printf("VCSM (GPU): HOST:             ");
-    err = test_vcsm_gpu(VCSM_CACHE_TYPE_HOST);
-    if (err)
-        return err;
-    printf("VCSM (GPU): VC:               ");
-    err = test_vcsm_gpu(VCSM_CACHE_TYPE_VC);
-    if (err)
-        return err;
-    printf("VCSM (GPU): HOST_AND_VC:      ");
-    err = test_vcsm_gpu(VCSM_CACHE_TYPE_HOST_AND_VC);
-    if (err)
-        return err;
-
-#ifdef RPIMEMMGR_VCSM_HAS_CMA
-
-    printf("VCSM (CMA): NONE:             ");
-    err = test_vcsm_cma(VCSM_CACHE_TYPE_NONE);
-    if (err)
-        return err;
-    printf("VCSM (CMA): HOST:             ");
-    err = test_vcsm_cma(VCSM_CACHE_TYPE_HOST);
-    if (err)
-        return err;
-    printf("VCSM (CMA): VC:               ");
-    err = test_vcsm_cma(VCSM_CACHE_TYPE_VC);
-    if (err)
-        return err;
-    printf("VCSM (CMA): HOST_AND_VC:      ");
-    err = test_vcsm_cma(VCSM_CACHE_TYPE_HOST_AND_VC);
-    if (err)
-        return err;
-
-#endif /* RPIMEMMGR_VCSM_HAS_CMA */
-
     printf("Mailbox:    NORMAL:           ");
     err = test_mailbox(MEM_FLAG_NORMAL);
     if (err)
@@ -186,7 +96,7 @@ int main(void)
     if (err)
         return err;
 
-    if (processor == 3) { /* BCM2711 */
+    if (processor == 3 || processor == 4) { /* BCM2711 */
         printf("DRM:                          ");
         err = test_drm();
         if (err)

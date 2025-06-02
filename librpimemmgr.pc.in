@@ -5,6 +5,6 @@ includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
 Name: @CPACK_PACKAGE_NAME@
 Description: @CPACK_PACKAGE_DESCRIPTION_SUMMARY@
 Version: @CPACK_PACKAGE_VERSION@
-Requires: libdrm vcsm libmailbox
+Requires: libdrm libmailbox
 Libs: -L${libdir} -lrpimemmgr
 Cflags: -I${includedir}

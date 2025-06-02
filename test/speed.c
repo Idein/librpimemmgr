@@ -88,70 +88,6 @@ clean_none:
     return err;
 }
 
-static int test_vcsm(const size_t size, const VCSM_CACHE_TYPE_T cache_type)
-{
-    void *dst, *src;
-    int err = 0;
-    struct rpimemmgr st;
-
-    err = rpimemmgr_init(&st);
-    if (err)
-        goto clean_none;
-
-    err = rpimemmgr_alloc_vcsm(size, 4096, cache_type, &dst, NULL, &st);
-    if (err)
-        goto clean_init;
-
-    err = rpimemmgr_alloc_vcsm(size, 4096, cache_type, &src, NULL, &st);
-    if (err)
-        goto clean_dst;
-
-    test_speed_copy(size, dst, src);
-
-    err |= rpimemmgr_free_by_usraddr(src, &st);
-clean_dst:
-    err |= rpimemmgr_free_by_usraddr(dst, &st);
-clean_init:
-    err |= rpimemmgr_finalize(&st);
-clean_none:
-    return err;
-}
-
-#ifdef RPIMEMMGR_VCSM_HAS_CMA
-
-static int test_vcsm_cma(const size_t size, const VCSM_CACHE_TYPE_T cache_type)
-{
-    void *dst, *src;
-    int err = 0;
-    struct rpimemmgr st;
-
-    err = rpimemmgr_init(&st);
-    if (err)
-        goto clean_none;
-
-    st.vcsm_use_cma = 1;
-
-    err = rpimemmgr_alloc_vcsm(size, 4096, cache_type, &dst, NULL, &st);
-    if (err)
-        goto clean_init;
-
-    err = rpimemmgr_alloc_vcsm(size, 4096, cache_type, &src, NULL, &st);
-    if (err)
-        goto clean_dst;
-
-    test_speed_copy(size, dst, src);
-
-    err |= rpimemmgr_free_by_usraddr(src, &st);
-clean_dst:
-    err |= rpimemmgr_free_by_usraddr(dst, &st);
-clean_init:
-    err |= rpimemmgr_finalize(&st);
-clean_none:
-    return err;
-}
-
-#endif /* RPIMEMMGR_VCSM_HAS_CMA */
-
 static int test_mailbox(const size_t size, const uint32_t flags)
 {
     void *dst, *src;
@@ -234,44 +170,6 @@ int main(void)
     if (err)
         return err;
 
-    printf("VCSM (GPU): NONE:             ");
-    err = test_vcsm(size, VCSM_CACHE_TYPE_NONE);
-    if (err)
-        return err;
-    printf("VCSM (GPU): HOST:             ");
-    err = test_vcsm(size, VCSM_CACHE_TYPE_HOST);
-    if (err)
-        return err;
-    printf("VCSM (GPU): VC:               ");
-    err = test_vcsm(size, VCSM_CACHE_TYPE_VC);
-    if (err)
-        return err;
-    printf("VCSM (GPU): HOST_AND_VC:      ");
-    err = test_vcsm(size, VCSM_CACHE_TYPE_HOST_AND_VC);
-    if (err)
-        return err;
-
-#ifdef RPIMEMMGR_VCSM_HAS_CMA
-
-    printf("VCSM (CMA): NONE:             ");
-    err = test_vcsm_cma(size, VCSM_CACHE_TYPE_NONE);
-    if (err)
-        return err;
-    printf("VCSM (CMA): HOST:             ");
-    err = test_vcsm_cma(size, VCSM_CACHE_TYPE_HOST);
-    if (err)
-        return err;
-    printf("VCSM (CMA): VC:               ");
-    err = test_vcsm_cma(size, VCSM_CACHE_TYPE_VC);
-    if (err)
-        return err;
-    printf("VCSM (CMA): HOST_AND_VC:      ");
-    err = test_vcsm_cma(size, VCSM_CACHE_TYPE_HOST_AND_VC);
-    if (err)
-        return err;
-
-#endif /* RPIMEMMGR_VCSM_HAS_CMA */
-
     printf("Mailbox:    DIRECT:           ");
     err = test_mailbox(size, MEM_FLAG_DIRECT);
     if (err)
@@ -283,7 +181,7 @@ int main(void)
             return err;
     }
 
-    if (processor == 3) { /* BCM2711 */
+    if (processor == 3 || processor == 4) { /* BCM2711, BCM2712 */
         printf("DRM:                          ");
         err = test_drm(size);
         if (err)

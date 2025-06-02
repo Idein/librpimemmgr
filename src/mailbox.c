@@ -32,16 +32,6 @@
  * Note that on VC6 (BCM2711) no bit in an address is dedicated for memory type
  * since an MMU is introduced also on GPU.
  *
- * The most significant 3 bits of bus address with VCSM will be:
- * +-------------+---------+------------------+
- * |             | BCM2835 | BCM2836, BCM2837 |
- * +-------------+---------+------------------+
- * | NONE        |   0x110 |            0b11x |
- * | HOST        |   0x110 |            0b11x |
- * | VC          |   0x000 |            0b00x |
- * | HOST_AND_VC |   0x000 |            0b00x |
- * +-------------+---------+------------------+
- *
  * The most significant 3 bits of bus address with Mailbox will be:
  * +------------------+---------+------------------+
  * |                  | BCM2835 | BCM2836, BCM2837 |

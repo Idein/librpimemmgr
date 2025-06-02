@@ -13,13 +13,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <sys/types.h>
-#include <interface/vcsm/user-vcsm.h>
-
-    /* vcsm.c */
-    int alloc_mem_vcsm(const size_t size, size_t align,
-            const VCSM_CACHE_TYPE_T cache_type, uint32_t *handlep,
-            uint32_t *busaddrp, void **usraddrp);
-    int free_mem_vcsm(const uint32_t handle, void *usraddr);
 
     /* mailbox.c */
     int get_processor_by_fd(const int fd_mb);
