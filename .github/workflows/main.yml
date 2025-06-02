@@ -12,19 +12,19 @@ jobs:
 
   build-package:
     runs-on: ubuntu-latest
-    container: debian:bullseye-slim
+    container: debian:bookworm-slim
     env:
       librpimemmgr_version: 5.0.0
     strategy:
       matrix:
         include:
-          - arch: armhf
-            triplet: arm-linux-gnueabihf
-            cflags: -mcpu=arm1176jzf-s -mtune=arm1176jzf-s -mfloat-abi=hard -marm -mfpu=vfp
-            libdrm-version: 2.4.104-1+rpi1
-            libdrm-base-url: https://archive.raspbian.org/raspbian/pool/main/libd/libdrm
-            libraspberrypi-version: 2+git20210928~141951+6e8f786-2
-            libraspberrypi-base-url: https://archive.raspberrypi.org/debian/pool/main/r/raspberrypi-userland
+          - arch: arm64
+            triplet: aarch64-linux-gnu
+            cflags: -mcpu=cortex-a72 -mtune=cortex-a72
+            libdrm-version: 2.4.123-1~bpo12+1+rpt1
+            libdrm-base-url: http://archive.raspberrypi.com/debian/pool/main/libd/libdrm/
+            libraspberrypi-version: 2+git20231018~131943+3c97f76-1
+            libraspberrypi-base-url: http://archive.raspberrypi.org/debian/pool/main/r/raspberrypi-userland/
             libmailbox-version: 3.1.1
     steps:
       - name: Install development packages
