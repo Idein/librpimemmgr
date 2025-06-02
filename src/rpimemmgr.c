@@ -22,10 +22,27 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+typedef int (*alloc_mem_drm_fn)(
+    const int fd_drm,
+    const size_t size,
+    uint32_t *handlep,
+    uint32_t *busaddrp,
+    void **usraddrp
+);
+
+typedef int (*free_mem_drm_fn)(
+    const int fd_drm,
+    const size_t size,
+    const uint32_t handle,
+    void *usraddr
+);
+
 struct rpimemmgr_priv {
     int fd_mb, fd_mem, fd_drm;
     void *busaddr_based_root;
     void *usraddr_based_root;
+    alloc_mem_drm_fn alloc_mem_drm;
+    free_mem_drm_fn free_mem_drm;
 };
 
 struct mem_elem {
@@ -79,7 +96,7 @@ static int free_elem(struct mem_elem *ep, struct rpimemmgr *sp)
             return free_mem_mailbox(sp->priv->fd_mb, ep->size, ep->handle,
                     ep->busaddr, (void*)ep->usraddr);
         case MEM_TYPE_DRM:
-            return free_mem_drm(sp->priv->fd_drm, ep->size, ep->handle,
+            return sp->priv->free_mem_drm(sp->priv->fd_drm, ep->size, ep->handle,
                     (void*)ep->usraddr);
         default:
             print_error("Unknown memory type: 0x%08x\n", ep->type);
@@ -178,6 +195,8 @@ int rpimemmgr_init(struct rpimemmgr *sp)
     priv->fd_drm = -1;
     priv->busaddr_based_root = NULL;
     priv->usraddr_based_root = NULL;
+    priv->alloc_mem_drm = NULL;
+    priv->free_mem_drm = NULL;
     sp->priv = priv;
     return 0;
 }
@@ -315,21 +334,37 @@ int rpimemmgr_alloc_drm(const size_t size, void **usraddrp, uint32_t *busaddrp, 
     }
 
     if (sp->priv->fd_drm == -1) {
-        const int fd = drmOpen("v3d", NULL);
-        if (fd == -1) {
-            print_error("drmOpen returned -1\n");
-            return fd;
+        const char *drivers[] = {"v3d", "vc4"};
+        const alloc_mem_drm_fn alloc_fns[] = {
+            alloc_mem_v3d_drm,
+            alloc_mem_vc4_drm,
+        };
+        const free_mem_drm_fn free_fns[] = {
+            free_mem_v3d_drm,
+            free_mem_vc4_drm,
+        };
+        for (long unsigned int i = 0; i < sizeof(drivers)/sizeof(drivers[0]); ++i) {
+            const int fd = drmOpen(drivers[i], NULL);
+            if (fd > 0) {
+                sp->priv->fd_drm = fd;
+                sp->priv->alloc_mem_drm = alloc_fns[i];
+                sp->priv->free_mem_drm = free_fns[i];
+                break;
+            }
         }
-        sp->priv->fd_drm = fd;
+        if (sp->priv->fd_drm == -1) {
+            print_error("drmOpen returned -1\n");
+            return sp->priv->fd_drm;
+        }
     }
 
-    err = alloc_mem_drm(sp->priv->fd_drm, size, &handle, &busaddr, &usraddr);
+    err = sp->priv->alloc_mem_drm(sp->priv->fd_drm, size, &handle, &busaddr, &usraddr);
     if (err)
         return err;
 
     err = register_mem(MEM_TYPE_DRM, size, handle, busaddr, usraddr, sp);
     if (err) {
-        (void) free_mem_drm(handle, size, handle, usraddr);
+        (void) sp->priv->free_mem_drm(handle, size, handle, usraddr);
         return err;
     }
 

@@ -9,14 +9,14 @@
 
 #include "rpimemmgr.h"
 #include "local.h"
-#include "v3d_drm.h"
+#include "vc4_drm.h"
 #include <drm.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 
-int alloc_mem_drm(const int fd_drm, const size_t size, uint32_t *handlep,
+int alloc_mem_vc4_drm(const int fd_drm, const size_t size, uint32_t *handlep,
         uint32_t *busaddrp, void **usraddrp)
 {
     uint32_t handle = 0;
@@ -24,25 +24,24 @@ int alloc_mem_drm(const int fd_drm, const size_t size, uint32_t *handlep,
     void* usraddr = NULL;
 
     {
-        struct drm_v3d_create_bo create_bo = {
+        struct drm_vc4_create_bo create_bo = {
             .size = size,
             .flags = 0,
         };
-        int res = ioctl(fd_drm, DRM_IOCTL_V3D_CREATE_BO, &create_bo);
+        int res = ioctl(fd_drm, DRM_IOCTL_VC4_CREATE_BO, &create_bo);
         if (res < 0) {
             print_error("Failed to allocate memory with DRM: %s\n", strerror(errno));
             return 1;
         }
         handle = create_bo.handle;
-        busaddr = create_bo.offset;
     }
 
     if (usraddrp != NULL) {
-        struct drm_v3d_mmap_bo mmap_bo = {
+        struct drm_vc4_mmap_bo mmap_bo = {
             .handle = handle,
             .flags = 0,
         };
-        int res = ioctl(fd_drm, DRM_IOCTL_V3D_MMAP_BO, &mmap_bo);
+        int res = ioctl(fd_drm, DRM_IOCTL_VC4_MMAP_BO, &mmap_bo);
         if (res < 0) {
             print_error("Failed to map DRM memory to userland: %s\n", strerror(errno));
             goto clean_alloc;
@@ -52,6 +51,7 @@ int alloc_mem_drm(const int fd_drm, const size_t size, uint32_t *handlep,
             print_error("Failed to map DRM memory to userland: %s\n", strerror(errno));
             goto clean_alloc;
         }
+        busaddr = mmap_bo.offset;
         *usraddrp = usraddr;
     }
 
@@ -60,11 +60,11 @@ int alloc_mem_drm(const int fd_drm, const size_t size, uint32_t *handlep,
     return 0;
 
 clean_alloc:
-    free_mem_drm(fd_drm, size, handle, usraddr);
+    free_mem_vc4_drm(fd_drm, size, handle, usraddr);
     return 1;
 }
 
-int free_mem_drm(const int fd_drm, const size_t size, const uint32_t handle, void *usraddr)
+int free_mem_vc4_drm(const int fd_drm, const size_t size, const uint32_t handle, void *usraddr)
 {
     int err, err_sum = 0;
 

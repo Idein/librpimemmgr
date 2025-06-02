@@ -181,12 +181,10 @@ int main(void)
             return err;
     }
 
-    if (processor == 3 || processor == 4) { /* BCM2711, BCM2712 */
-        printf("DRM:                          ");
-        err = test_drm(size);
-        if (err)
-            return err;
-    }
+    printf("DRM:                          ");
+    err = test_drm(size);
+    if (err)
+        return err;
 
     return 0;
 }

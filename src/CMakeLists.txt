@@ -2,7 +2,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include
                     ${CMAKE_CURRENT_BINARY_DIR}/../include)
 add_compile_options(-W -Wall -Wextra -pipe -O2 -g ${DRM_CFLAGS} ${MAILBOX_CFLAGS})
 
-set(rpimemmgr_SOURCES rpimemmgr.c mailbox.c unif.c drm.c)
+set(rpimemmgr_SOURCES rpimemmgr.c mailbox.c unif.c v3d_drm.c vc4_drm.c)
 add_library(rpimemmgr        SHARED ${rpimemmgr_SOURCES})
 add_library(rpimemmgr-static STATIC ${rpimemmgr_SOURCES})
 set_target_properties(rpimemmgr-static PROPERTIES OUTPUT_NAME rpimemmgr)

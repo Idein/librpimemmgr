@@ -96,12 +96,10 @@ int main(void)
     if (err)
         return err;
 
-    if (processor == 3 || processor == 4) { /* BCM2711 */
-        printf("DRM:                          ");
-        err = test_drm();
-        if (err)
-            return err;
-    }
+    printf("DRM:                          ");
+    err = test_drm();
+    if (err)
+        return err;
 
     return 0;
 }
