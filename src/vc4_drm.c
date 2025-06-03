@@ -23,9 +23,11 @@ int alloc_mem_vc4_drm(const int fd_drm, const size_t size, uint32_t *handlep,
     uint32_t busaddr = 0;
     void* usraddr = NULL;
 
+    const size_t aligned_size = ((size + 4096 - 1) / 4096) * 4096;
+
     {
         struct drm_vc4_create_bo create_bo = {
-            .size = size,
+            .size = aligned_size,
             .flags = 0,
         };
         int res = ioctl(fd_drm, DRM_IOCTL_VC4_CREATE_BO, &create_bo);
@@ -46,7 +48,7 @@ int alloc_mem_vc4_drm(const int fd_drm, const size_t size, uint32_t *handlep,
             print_error("Failed to map DRM memory to userland: %s\n", strerror(errno));
             goto clean_alloc;
         }
-        usraddr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd_drm, mmap_bo.offset);
+        usraddr = mmap(NULL, aligned_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd_drm, mmap_bo.offset);
         if (usraddr == MAP_FAILED) {
             print_error("Failed to map DRM memory to userland: %s\n", strerror(errno));
             goto clean_alloc;
@@ -60,7 +62,7 @@ int alloc_mem_vc4_drm(const int fd_drm, const size_t size, uint32_t *handlep,
     return 0;
 
 clean_alloc:
-    free_mem_vc4_drm(fd_drm, size, handle, usraddr);
+    free_mem_vc4_drm(fd_drm, aligned_size, handle, usraddr);
     return 1;
 }
 
@@ -68,8 +70,10 @@ int free_mem_vc4_drm(const int fd_drm, const size_t size, const uint32_t handle,
 {
     int err, err_sum = 0;
 
+    const size_t aligned_size = ((size + 4096 - 1) / 4096) * 4096;
+
     if (usraddr != NULL) {
-        err = munmap(usraddr, size);
+        err = munmap(usraddr, aligned_size);
         if (err) {
             print_error("munmap: %s\n", strerror(errno));
             err_sum = err;
